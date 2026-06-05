@@ -1,0 +1,9 @@
+Good morning everyone, today we will explore real-time AI interpretation.
+
+The first challenge is balancing latency and accuracy in a streaming pipeline.
+
+The model uses a tension mechanism to decide which words matter.
+
+But after the next words arrive, it becomes clear that the speaker means attention mechanism.
+
+A small glossary helps the system keep technical terms consistent.
