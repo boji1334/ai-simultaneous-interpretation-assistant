@@ -10,6 +10,7 @@
 
 - Runnable backend and frontend.
 - WebSocket live subtitle demo.
+- Synchronized self-written audio demo with bilingual overlay.
 - Chunked microphone audio stream path.
 - Automatic correction demo.
 - Subtitle revision ledger.
@@ -24,6 +25,7 @@
 - Full fallback snapshot via `加载最终字幕`.
 - Tests and CI workflow.
 - PR template.
+- Narrated demo video uploaded to GitHub Release.
 
 ## Before First Official Submission
 
@@ -45,10 +47,16 @@
 5. Run `.\scripts\smoke-single-service.ps1`.
 6. Manually verify the correction demo if the video needs a visual rehearsal.
 7. Generate or record original demo audio from `assets/demo/demo-script.en.txt`.
-8. Record a narrated demo video.
+8. Record or regenerate a narrated demo video with `python scripts\generate-demo-video.py`.
 9. Upload the video to an accessible platform.
 10. Add the video link to `README.md`.
 11. Confirm README lists dependencies and original/third-party boundaries.
+
+Current demo video:
+
+```text
+https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4
+```
 
 ## Suggested First PR
 

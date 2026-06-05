@@ -187,7 +187,19 @@ http://127.0.0.1:8000
 
 默认下载 Wikimedia Commons 上的 MITx 在线课程欢迎视频到 `assets/demo/external-course-demo.webm`。视频文件由 `.gitignore` 排除，仓库只保留下载脚本、来源页、授权说明和演示代码。
 
-Demo 视频链接将在最终提交阶段更新到 README；当前仓库已提供可复现的本地演示流程、脚本和演示素材说明。
+## Demo 视频
+
+- Release 页面：[AI 同声传译助手 Demo Video](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/tag/demo-video-v1)
+- MP4 直链：[final-demo.mp4](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4)
+
+视频包含中文语音讲解，覆盖题目贴合度、实时字幕流、`张力机制 -> 注意力机制` 回溯修正、同步素材同传、修正时间线、量化指标、导出、总结和工程质量说明。
+
+如需重新生成本地 demo 视频：
+
+```powershell
+python -m pip install imageio-ffmpeg
+python scripts\generate-demo-video.py
+```
 
 ## 技术架构
 
@@ -320,6 +332,7 @@ translate_english/
   scripts/
     check.ps1
     generate-demo-audio.ps1
+    generate-demo-video.py
     pre-submit-audit.ps1
     runtime_smoke.py
     smoke-single-service.ps1
@@ -362,9 +375,10 @@ translate_english/
 
 当前验证结果：
 
-- 后端测试：19 passed
+- 后端测试：26 passed
 - 前端构建：passed
-- 单服务部署：已通过首页、API、WebSocket 演示流、音频分片流和导出验收
+- 单服务部署：已通过首页、API、同步素材同传、WebSocket 演示流、音频分片流和导出验收
+- 提交前审计：required files、text scan、development ports 均通过
 - 开发模式：支持 Vite 代理 `/api` 和 `/ws`
 
 ## 官方要求核对
@@ -376,15 +390,13 @@ translate_english/
 | 创新性 | 字幕状态机、滑动窗口修正、术语表辅助修正、可审计修正时间线、字幕版本轨迹、量化指标 |
 | 工程质量 | 前后端分层、Provider 架构、测试、CI、脚本、文档 |
 | README | 已提供启动、架构、依赖、原创边界和比赛规则说明 |
-| Demo 视频 | 最终提交前录制并补链接 |
-| 持续 PR/commit | 需要推送远程仓库后按小 PR 继续交付 |
-| commit 时间戳 | 需要确保所有提交在 2026-06-05 00:00 至 2026-06-07 23:59 内 |
+| Demo 视频 | 已录制并上传到 GitHub Release，README 已提供链接 |
+| 持续 PR/commit | 已通过多个小 PR 持续交付，主分支保持可运行 |
+| commit 时间戳 | 当前提交均在 2026-06-05 00:00 至 2026-06-07 23:59 批次窗口内 |
 
-## 下一步
+## 最终提交前核对
 
-1. 配置 Git 用户名和邮箱。
-2. 创建开题后的 GitHub/Gitee 空仓库。
-3. 推送首个 commit 并创建第一个 PR。
-4. 在官方 24 小时窗口内提交仓库地址。
-5. 后续功能继续按小 PR 合并。
-6. 录制 demo 视频并将链接写入 README。
+1. 确认仓库保持公开或在截止后可公开访问。
+2. 在官方提交入口填写仓库地址和 README 中的 demo 视频链接。
+3. 截止前再次运行 `.\scripts\check.ps1`、`.\scripts\smoke-single-service.ps1`、`.\scripts\pre-submit-audit.ps1`。
+4. 若希望再备份一份视频，可将 Release 中的 `final-demo.mp4` 同步上传到 B 站或网盘，并把备用链接补充到 README。
