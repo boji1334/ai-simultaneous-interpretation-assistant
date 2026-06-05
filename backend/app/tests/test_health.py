@@ -249,10 +249,21 @@ def test_video_demo_source_exposes_license_and_media_url() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["title"] == "Welcome (6.002x-1).webm"
-    assert payload["mediaUrl"].startswith("https://upload.wikimedia.org/")
-    assert "Creative Commons" in payload["license"]
-    assert "online course" in payload["scenario"].lower()
+    assert payload["title"] == "Self-written AI interpretation demo audio"
+    assert payload["mediaUrl"] == "/api/demo/audio"
+    assert payload["mediaType"] == "audio"
+    assert "Original competition demo text" in payload["license"]
+    assert "technical talk" in payload["scenario"].lower()
+
+
+def test_demo_audio_endpoint_serves_generated_wav() -> None:
+    client = TestClient(app)
+
+    response = client.get("/api/demo/audio")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("audio/wav")
+    assert len(response.content) > 1000
 
 
 def test_video_demo_snapshot_contains_corrected_course_term() -> None:
@@ -262,14 +273,14 @@ def test_video_demo_snapshot_contains_corrected_course_term() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert len(payload["segments"]) >= 17
-    assert payload["segments"][-1]["endTime"] >= 128
-    corrected = next(segment for segment in payload["segments"] if segment["id"] == "video-002")
+    assert len(payload["segments"]) == 5
+    assert payload["segments"][-1]["endTime"] >= 30
+    corrected = next(segment for segment in payload["segments"] if segment["id"] == "video-003")
     assert corrected["status"] == "corrected"
-    assert "电路与电子学" in corrected["translatedText"]
-    assert payload["corrections"][0]["segmentId"] == "video-002"
-    assert payload["metrics"]["correctionLatencyMs"] == 1210
-    assert any(term["source"] == "Circuits and Electronics" for term in payload["glossary"])
+    assert "注意力机制" in corrected["translatedText"]
+    assert payload["corrections"][0]["segmentId"] == "video-003"
+    assert payload["metrics"]["correctionLatencyMs"] == 1480
+    assert any(term["source"] == "attention mechanism" for term in payload["glossary"])
 
 
 def test_video_demo_websocket_stream_exposes_correction() -> None:
@@ -284,10 +295,10 @@ def test_video_demo_websocket_stream_exposes_correction() -> None:
             if event["type"] == "segment":
                 segment = event["segment"]
                 corrected_seen = corrected_seen or (
-                    segment["id"] == "video-002" and segment["status"] == "corrected"
+                    segment["id"] == "video-003" and segment["status"] == "corrected"
                 )
             if event["type"] == "correction":
-                correction_trace_seen = event["correction"]["segmentId"] == "video-002"
+                correction_trace_seen = event["correction"]["segmentId"] == "video-003"
             done_seen = event["type"] == "done"
 
     assert corrected_seen

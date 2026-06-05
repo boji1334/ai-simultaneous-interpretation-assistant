@@ -87,6 +87,7 @@ class VideoDemoSource(BaseModel):
     title: str
     page_url: str = Field(alias="pageUrl")
     media_url: str = Field(alias="mediaUrl")
+    media_type: Literal["audio", "video"] = Field(default="video", alias="mediaType")
     license: str
     attribution: str
     duration_seconds: int = Field(alias="durationSeconds")

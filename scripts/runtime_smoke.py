@@ -60,15 +60,20 @@ async def check_http_endpoints() -> None:
         assert_true("00:00:07,700 --> 00:00:11,500" in export_payload["content"], "SRT export invalid.")
 
         video_source = (await client.get(f"{BASE_URL}/api/video-demo/source")).json()
-        assert_true("Creative Commons" in video_source["license"], "Video source license missing.")
-        assert_true(video_source["mediaUrl"].startswith("https://upload.wikimedia.org/"), "Video media URL invalid.")
+        assert_true(video_source["mediaType"] == "audio", "Synchronized demo source should be audio.")
+        assert_true(video_source["mediaUrl"] == "/api/demo/audio", "Synchronized demo media URL invalid.")
+        assert_true("Original competition demo text" in video_source["license"], "Demo source license missing.")
+
+        demo_audio = await client.get(f"{BASE_URL}/api/demo/audio")
+        assert_true(demo_audio.status_code == 200, "Demo audio endpoint failed.")
+        assert_true(demo_audio.headers["content-type"].startswith("audio/wav"), "Demo audio content type invalid.")
 
         video_snapshot = (await client.get(f"{BASE_URL}/api/video-demo/snapshot")).json()
-        assert_true(len(video_snapshot["segments"]) >= 17, "Video demo should cover the full transcript.")
-        assert_true(video_snapshot["segments"][-1]["endTime"] >= 128, "Video demo subtitles stop before video end.")
-        video_corrected = next(segment for segment in video_snapshot["segments"] if segment["id"] == "video-002")
+        assert_true(len(video_snapshot["segments"]) == 5, "Synchronized demo should expose five timed segments.")
+        assert_true(video_snapshot["segments"][-1]["endTime"] >= 30, "Synchronized demo subtitles stop before audio end.")
+        video_corrected = next(segment for segment in video_snapshot["segments"] if segment["id"] == "video-003")
         assert_true(video_corrected["status"] == "corrected", "Video demo did not expose corrected segment.")
-        assert_true("电路与电子学" in video_corrected["translatedText"], "Video demo correction missing target term.")
+        assert_true("注意力机制" in video_corrected["translatedText"], "Video demo correction missing target term.")
 
 
 async def check_demo_websocket() -> None:
@@ -99,8 +104,8 @@ async def check_video_demo_websocket() -> None:
 
     assert_true(any(event["type"] == "metric" for event in events), "Video demo stream missing metrics.")
     assert_true(
-        any(event.get("segment", {}).get("id") == "video-002" and event.get("segment", {}).get("status") == "corrected" for event in events),
-        "Video demo stream missing corrected course subtitle.",
+        any(event.get("segment", {}).get("id") == "video-003" and event.get("segment", {}).get("status") == "corrected" for event in events),
+        "Video demo stream missing corrected attention subtitle.",
     )
     assert_true(any(event["type"] == "correction" for event in events), "Video demo stream missing correction trace.")
 

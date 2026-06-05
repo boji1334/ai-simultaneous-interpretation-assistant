@@ -177,6 +177,92 @@ button.secondary:hover {
   background: #111827;
 }
 
+.controlled-media-stage {
+  display: grid;
+  width: 100%;
+  min-height: 320px;
+  aspect-ratio: 16 / 9;
+  background:
+    linear-gradient(135deg, rgb(10 18 32 / 94%), rgb(24 42 64 / 92%)),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 6%) 0 1px, transparent 1px 84px);
+}
+
+.lecture-visual {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: 34px 28px 118px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.lecture-visual span {
+  color: #6ee7b7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.lecture-visual strong {
+  margin-top: 10px;
+  font-size: 36px;
+  line-height: 1.1;
+}
+
+.lecture-visual p {
+  max-width: 520px;
+  margin: 12px 0 0;
+  color: #bfd2e8;
+  font-weight: 800;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  margin-top: 24px;
+}
+
+.waveform i {
+  display: block;
+  width: 9px;
+  border-radius: 999px;
+  background: #f4d35e;
+}
+
+.waveform i:nth-child(1) {
+  height: 24px;
+}
+
+.waveform i:nth-child(2) {
+  height: 42px;
+}
+
+.waveform i:nth-child(3) {
+  height: 30px;
+}
+
+.waveform i:nth-child(4) {
+  height: 52px;
+}
+
+.waveform i:nth-child(5) {
+  height: 34px;
+}
+
+.waveform i:nth-child(6) {
+  height: 44px;
+}
+
+.controlled-media-stage audio {
+  position: absolute;
+  right: 18px;
+  bottom: 138px;
+  left: 18px;
+  z-index: 2;
+  width: calc(100% - 36px);
+}
+
 .video-placeholder {
   display: grid;
   place-items: center;
@@ -944,6 +1030,21 @@ textarea {
     bottom: 10px;
     left: 10px;
     padding: 10px 12px;
+  }
+
+  .lecture-visual {
+    padding: 26px 18px 128px;
+  }
+
+  .lecture-visual strong {
+    font-size: 25px;
+  }
+
+  .controlled-media-stage audio {
+    right: 10px;
+    bottom: 128px;
+    left: 10px;
+    width: calc(100% - 20px);
   }
 
   .video-caption .caption-zh {

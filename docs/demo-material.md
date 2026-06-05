@@ -13,14 +13,14 @@ assets/demo/demo-script.en.txt
 ## Recommended Recording Flow
 
 1. Use the text in `assets/demo/demo-script.en.txt`.
-2. Generate or record an English audio file from that text.
-3. Keep the audio file name simple, for example `demo-en.wav`.
+2. Use the committed `assets/demo/demo-en.wav` for the main synchronized demo.
+3. Regenerate the WAV from the text if you need to change narration timing.
 4. Mention in the README or PR description that the demo audio is self-written/generated for this competition.
 5. Avoid using TED, YouTube, course, or conference audio unless you have explicit permission.
 
 ## External Video Policy
 
-The competition topic explicitly mentions speeches, technical talks, international conferences, and online courses. To make the demo feel closer to that scenario, the app can also show an external video player synchronized with the subtitle stream.
+The competition topic explicitly mentions speeches, technical talks, international conferences, and online courses. The main demo uses self-written generated audio because the audio, English source text, and Chinese interpretation can be synchronized exactly. External public video remains useful as secondary material, but it should not be the primary demo unless its transcript timing is verified.
 
 Use only material that is legally safe for a public demo:
 
@@ -38,7 +38,7 @@ License: Creative Commons Attribution-Share Alike 4.0
 Scenario: MITx online course welcome video
 ```
 
-This sample is appropriate for demonstrating the "watching an English online course with Chinese interpretation subtitles" workflow. The app still keeps the default self-written correction demo because it is deterministic and designed to highlight the required automatic correction capability.
+This sample is appropriate for demonstrating the "watching an English online course with Chinese interpretation subtitles" workflow after its timing has been verified. The app keeps the default self-written synchronized demo because it is deterministic and designed to highlight the required automatic correction capability.
 
 To download the public sample for local recording:
 
@@ -68,7 +68,7 @@ Default output:
 assets/demo/demo-en.wav
 ```
 
-This audio is generated from original text in this repository and is suitable for recording the demo video. If the final repository should stay lightweight, keep the script and text as the source of truth and regenerate the WAV locally when needed.
+This audio is generated from original text in this repository and is suitable for recording the demo video. The repository currently includes the WAV so judges can run the synchronized demo immediately after cloning.
 
 ## Correction Moment
 
