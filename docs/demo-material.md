@@ -70,6 +70,27 @@ assets/demo/demo-en.wav
 
 This audio is generated from original text in this repository and is suitable for recording the demo video. The repository currently includes the WAV so judges can run the synchronized demo immediately after cloning.
 
+## Narrated Demo Video Generation
+
+The repository includes a script that generates a narrated MP4 from the demo storyboard:
+
+```powershell
+python -m pip install imageio-ffmpeg
+python scripts\generate-demo-video.py
+```
+
+Default output:
+
+```text
+assets/demo/final-demo.mp4
+```
+
+The generated MP4 is ignored by Git and can be uploaded to a public release, Bilibili, or cloud drive. The current submitted video is hosted here:
+
+```text
+https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4
+```
+
 ## Correction Moment
 
 The source intentionally contains this pair:
