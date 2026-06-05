@@ -22,6 +22,7 @@ dist/
 
 # Generated demo media
 assets/demo/*.wav
+!assets/demo/demo-en.wav
 assets/demo/*.mp3
 assets/demo/*.mp4
 assets/demo/*.webm

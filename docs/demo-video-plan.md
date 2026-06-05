@@ -5,20 +5,26 @@ Use this as a 3 to 5 minute narrated video outline. The goal is to show product 
 ## Recording Setup
 
 1. Run `.\scripts\check.ps1` once before recording.
-2. Optionally download the public online-course video:
+2. The default synchronized demo audio is already included at `assets/demo/demo-en.wav`. If it needs to be regenerated on Windows:
+
+```powershell
+.\scripts\generate-demo-audio.ps1
+```
+
+3. Optionally download the public online-course video only as secondary material:
 
 ```powershell
 .\scripts\download-demo-video.ps1
 ```
 
-3. Start single-service mode:
+4. Start single-service mode:
 
 ```powershell
 .\scripts\smoke-single-service.ps1
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-4. Open:
+5. Open:
 
 ```text
 http://127.0.0.1:8000
@@ -31,11 +37,11 @@ http://127.0.0.1:8000
 3. Click `启动实时演示`: show subtitles streaming in order.
 4. Pause on the correction: show `张力机制 -> 注意力机制`.
 5. Show `修正时间线`: explain trigger, reason, `1480ms`, and `v1 -> v2`.
-6. Click `启动视频同传`: show the external English online-course video with Chinese interpretation above and English source text below.
-7. Pause on the video correction: show `电路和电子产品 -> 电路与电子学`.
-8. Show video source card: mention Creative Commons license and attribution.
+6. Click `加载同步素材`, then `启动同步同传`: show the self-written English audio synchronized with Chinese interpretation above and English source text below.
+7. Pause on the media correction: show `张力机制 -> 注意力机制` triggered by the later `attention mechanism` context.
+8. Show source card: mention the material is self-written/generated for the competition, so timing and copyright are both controlled.
 9. Show metrics: first subtitle latency, correction latency, glossary hit rate, final stability rate.
-10. Show glossary: explain why `attention mechanism` and `Circuits and Electronics` stay consistent.
+10. Show glossary: explain why `attention mechanism` stays consistent.
 11. Click `生成总结`: show summary, key points, terms, and correction notes.
 12. Click `下载 MD` or `下载 SRT`: show export capability.
 13. Click `加载最终字幕`: explain this is a fallback snapshot for stable review/demo.
@@ -52,7 +58,7 @@ http://127.0.0.1:8000
 
 右侧的修正时间线记录了为什么修、修正延迟、版本变化和命中的术语。这里可以看到修正延迟是 1480 毫秒，版本从 v1 更新到 v2。这也是本作品区别于普通翻译工具的核心创新点。
 
-接下来切到外部英文视频同传。这里加载的是带授权来源的公开网课视频，系统在视频播放器上叠加双语字幕：中文同传在上方，英文原文在下方，方便评委对照“说了什么”和“翻成什么”。这个场景对应题目中“观看英语网课、技术分享或会议”的真实需求。可以看到课程术语 Circuits and Electronics 一开始被译成电路和电子产品，后续上下文确认课程名称后，字幕回溯修正为电路与电子学，并保留修正前文本、版本变化和修正原因。
+接下来切到同步素材同传。这里使用的是我们自写英文脚本生成的 TTS 音频，系统在播放器上叠加双语字幕：中文同传在上方，英文原文在下方，方便评委对照“说了什么”和“翻成什么”。相比直接使用公开视频，这个主 demo 的音频、英文原文和中文翻译时间轴完全可控，不会出现音频和字幕错位。可以看到系统先把 tension mechanism 译成张力机制，后续上下文出现 attention mechanism 后，字幕回溯修正为注意力机制，并保留修正前文本、版本变化和修正原因。
 
 下方还有术语表、量化指标、字幕导出和会后总结。最终字幕可以导出为 Markdown 或 SRT，便于课后复盘或制作字幕。
 
@@ -69,11 +75,8 @@ http://127.0.0.1:8000
 - `1480ms`
 - `v1 -> v2`
 - `attention mechanism`
-- `外部英文视频同传`
+- `同步素材同传`
 - 中文同传在上方，英文原文在下方
-- `Creative Commons`
-- `电路与电子学`
-- `Circuits and Electronics`
 - `实时 AI 同声传译演示总结`
 - Export buttons
 - Provider panel

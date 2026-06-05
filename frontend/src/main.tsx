@@ -100,6 +100,7 @@ type VideoDemoSource = {
   title: string;
   pageUrl: string;
   mediaUrl: string;
+  mediaType: "audio" | "video";
   license: string;
   attribution: string;
   durationSeconds: number;
@@ -263,16 +264,42 @@ function App() {
   const [videoSyncSummary, setVideoSyncSummary] = useState<SummaryResult | null>(null);
   const demoSocketRef = useRef<WebSocket | null>(null);
   const audioSocketRef = useRef<WebSocket | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null);
   const spokenSegmentIds = useRef(new Set<string>());
 
   const exportText = useMemo(() => buildExportText(segments), [segments]);
   const currentSegment = segments.at(-1);
   const isVideoCaptionMode =
     videoSyncSegments.length > 0 && segments.some((segment) => segment.id.startsWith("video-"));
+  const getCorrectionRevealTime = (trace: CorrectionTrace) => {
+    const segment = videoSyncSegments.find((item) => item.id === trace.segmentId);
+    const contextSegment = videoSyncSegments.find((item) => {
+      if (item.id === trace.segmentId || item.startTime <= (segment?.startTime ?? 0)) {
+        return false;
+      }
+
+      return trace.changedTerms.some((term) => item.sourceText.toLowerCase().includes(term.toLowerCase()));
+    });
+    const anchorTime = contextSegment?.startTime ?? segment?.endTime ?? segment?.startTime ?? 0;
+    return anchorTime + trace.latencyMs / 1000;
+  };
   const activeVideoSegment = useMemo(() => {
     if (!isVideoCaptionMode) {
       return null;
+    }
+
+    const correctionOverlaySegment = videoSyncCorrections
+      .map((trace) => ({
+        trace,
+        revealTime: getCorrectionRevealTime(trace),
+        segment: segments.find((segment) => segment.id === trace.segmentId && segment.status === "corrected")
+      }))
+      .find((item) => {
+        return item.segment && videoTime >= item.revealTime && videoTime <= item.revealTime + 3.6;
+      })?.segment;
+
+    if (correctionOverlaySegment) {
+      return correctionOverlaySegment;
     }
 
     const timedSegment = [...segments]
@@ -283,7 +310,8 @@ function App() {
         return videoTime >= start && videoTime <= end;
       });
     return timedSegment ?? currentSegment;
-  }, [currentSegment, isVideoCaptionMode, segments, videoTime]);
+  }, [currentSegment, isVideoCaptionMode, segments, videoSyncCorrections, videoSyncSegments, videoTime]);
+  const isControlledAudioDemo = videoSource?.mediaType === "audio";
   const correctedSegment = segments.find((segment) => segment.status === "corrected");
   const revisionGroups = useMemo(() => {
     return revisions.reduce<Record<string, SubtitleRevision[]>>((groups, revision) => {
@@ -291,12 +319,6 @@ function App() {
       return groups;
     }, {});
   }, [revisions]);
-
-  const getCorrectionRevealTime = (trace: CorrectionTrace) => {
-    const segment = videoSyncSegments.find((item) => item.id === trace.segmentId);
-    const anchorTime = segment?.endTime ?? segment?.startTime ?? 0;
-    return anchorTime + trace.latencyMs / 1000 + 8;
-  };
 
   const resetVideoSync = () => {
     setIsVideoSyncActive(false);
@@ -373,15 +395,15 @@ function App() {
     });
 
     if (isComplete) {
-      setConnectionState("视频同传完成");
-      setLastMessage("视频播放已到末尾，中文字幕覆盖完整视频");
+      setConnectionState("同步同传完成");
+      setLastMessage("素材播放已到末尾，中文字幕覆盖完整音频");
       if (videoSyncSummary) {
         setSummary(videoSyncSummary);
       }
       setIsVideoSyncActive(false);
     } else {
-      setConnectionState("视频同传中");
-      setLastMessage(`视频 ${videoTime.toFixed(1)}s，同步显示当前中文同传字幕`);
+      setConnectionState("同步同传中");
+      setLastMessage(`素材 ${videoTime.toFixed(1)}s，同步显示当前中文同传字幕`);
     }
   }, [isVideoSyncActive, videoSyncCorrections, videoSyncMetrics, videoSyncRevisions, videoSyncSegments, videoSyncSummary, videoTime]);
 
@@ -611,10 +633,10 @@ function App() {
       const source = await fetchJson<VideoDemoSource>(`${API_BASE}/api/video-demo/source`);
       setVideoSource(source);
       setVideoUrl(source.mediaUrl);
-      setLastMessage("已加载 Wikimedia 公开网课视频素材");
+      setLastMessage("已加载可控同步演示素材");
       return source;
     } catch {
-      setLastMessage("外部视频素材加载失败，请检查后端服务");
+      setLastMessage("同步演示素材加载失败，请检查后端服务");
       return null;
     }
   };
@@ -629,6 +651,7 @@ function App() {
       title: file.name,
       pageUrl: "",
       mediaUrl: objectUrl,
+      mediaType: "video",
       license: "Local demo file",
       attribution: "User provided local file",
       durationSeconds: 0,
@@ -652,8 +675,8 @@ function App() {
     try {
       snapshot = await fetchJson<VideoDemoSnapshot>(`${API_BASE}/api/video-demo/snapshot`);
     } catch {
-      setConnectionState("视频同传失败");
-      setLastMessage("无法加载视频字幕快照，请检查后端服务");
+      setConnectionState("同步同传失败");
+      setLastMessage("无法加载同步字幕快照，请检查后端服务");
       return;
     }
 
@@ -680,17 +703,17 @@ function App() {
     setIsVideoSyncActive(true);
     spokenSegmentIds.current.clear();
     setVideoTime(0);
-    setConnectionState("视频待播放");
-    setLastMessage("视频字幕已就绪，播放时会按时间同步显示中文翻译");
+    setConnectionState("素材待播放");
+    setLastMessage("同步字幕已就绪，播放时会按时间显示中文翻译");
 
     window.setTimeout(() => {
-      if (!videoRef.current) {
+      if (!mediaRef.current) {
         return;
       }
-      videoRef.current.load();
-      videoRef.current.currentTime = 0;
-      void videoRef.current.play().catch(() => {
-        setLastMessage("浏览器阻止自动播放，请手动点击视频播放，字幕会跟随播放时间同步出现");
+      mediaRef.current.load();
+      mediaRef.current.currentTime = 0;
+      void mediaRef.current.play().catch(() => {
+        setLastMessage("浏览器阻止自动播放，请手动点击播放，字幕会跟随播放时间同步出现");
       });
     }, 0);
   };
@@ -923,34 +946,61 @@ function App() {
         </div>
       </section>
 
-      <section className="video-demo-panel" aria-label="外部视频同传演示">
+      <section className="video-demo-panel" aria-label="同步素材同传演示">
         <div className="section-head">
           <div>
-            <h2>外部英文视频同传</h2>
-            <p>加载公开视频或本地视频，同步展示中文字幕、修正高亮和版本轨迹。</p>
+            <h2>同步素材同传</h2>
+            <p>加载自写英文音频或本地视频，同步展示中文字幕、英文原文、修正高亮和版本轨迹。</p>
           </div>
           <div className="video-actions">
             <button type="button" className="secondary" onClick={loadVideoDemoSource}>
-              加载公开网课视频
+              加载同步素材
             </button>
             <button type="button" onClick={startVideoDemo}>
-              启动视频同传
+              启动同步同传
             </button>
           </div>
         </div>
 
         <div className="video-layout">
           <div className="video-frame">
-            {videoUrl ? (
+            {videoUrl && isControlledAudioDemo ? (
+              <div className="controlled-media-stage">
+                <div className="lecture-visual">
+                  <span>AI TECH TALK</span>
+                  <strong>Real-time AI Interpretation</strong>
+                  <p>Original English audio · synchronized Chinese interpretation</p>
+                  <div className="waveform" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                </div>
+                <audio
+                  ref={(element) => {
+                    mediaRef.current = element;
+                  }}
+                  controls
+                  preload="metadata"
+                  src={videoUrl}
+                  onTimeUpdate={(event) => setVideoTime(event.currentTarget.currentTime)}
+                />
+              </div>
+            ) : videoUrl ? (
               <video
-                ref={videoRef}
+                ref={(element) => {
+                  mediaRef.current = element;
+                }}
                 controls
                 preload="metadata"
                 src={videoUrl}
                 onTimeUpdate={(event) => setVideoTime(event.currentTarget.currentTime)}
               />
             ) : (
-              <div className="video-placeholder">加载公开网课视频后，可在这里观看同步中文字幕。</div>
+              <div className="video-placeholder">加载同步演示素材后，可在这里观看实时中文字幕。</div>
             )}
             {isVideoCaptionMode && activeVideoSegment && (
               <div className={`video-caption ${activeVideoSegment.status}`}>
@@ -965,9 +1015,9 @@ function App() {
           </div>
 
           <div className="video-source-card">
-            <span>视频素材</span>
+            <span>演示素材</span>
             <strong>{videoSource?.title ?? "尚未加载"}</strong>
-            <p>{videoSource?.note ?? "建议使用自写、自录、公共领域或 Creative Commons 授权视频。"}</p>
+            <p>{videoSource?.note ?? "建议使用自写、自录、公共领域或 Creative Commons 授权音视频素材。"}</p>
             {videoSource && (
               <dl>
                 <div>
@@ -1010,7 +1060,7 @@ function App() {
 
           <div className="subtitle-list" aria-live="polite">
             {isVideoCaptionMode ? (
-              <div className="empty-state compact">视频字幕已叠加在播放器上，修正记录保留在右侧。</div>
+              <div className="empty-state compact">同步字幕已叠加在播放器上，修正记录保留在右侧。</div>
             ) : segments.length === 0 ? (
               <div className="empty-state">点击“启动实时演示”，观察字幕流和修正瞬间。</div>
             ) : (

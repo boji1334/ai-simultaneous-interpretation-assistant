@@ -122,6 +122,17 @@ def get_demo_snapshot() -> dict:
     }
 
 
+@app.get("/api/demo/audio")
+def get_demo_audio() -> FileResponse:
+    audio_path = ROOT_DIR / "assets" / "demo" / "demo-en.wav"
+    if not audio_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Demo audio is missing. Run scripts/generate-demo-audio.ps1 first.",
+        )
+    return FileResponse(audio_path, media_type="audio/wav", filename="demo-en.wav")
+
+
 @app.get("/api/video-demo/source")
 def get_video_demo_source() -> dict:
     return VIDEO_DEMO_SOURCE.model_dump(by_alias=True)

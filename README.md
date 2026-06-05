@@ -44,10 +44,11 @@
 - Provider 状态：`GET /api/providers`
 - Provider 诊断：`GET /api/providers/diagnostics`
 - 实时演示流：`GET /ws/demo`
-- 外部视频演示流：`GET /ws/video-demo`
+- 同步素材演示流：`GET /ws/video-demo`
 - 音频分片流式同传：`GET /ws/audio-stream`
-- 外部视频素材：`GET /api/video-demo/source`
-- 外部视频快照：`GET /api/video-demo/snapshot`
+- 同步演示素材：`GET /api/video-demo/source`
+- 同步演示音频：`GET /api/demo/audio`
+- 同步演示快照：`GET /api/video-demo/snapshot`
 - 最终字幕：`GET /api/demo/transcript`
 - 完整演示快照：`GET /api/demo/snapshot`
 - 字幕导出：`GET /api/demo/export?format=markdown|srt`
@@ -56,7 +57,7 @@
 - 字幕版本轨迹：`GET /api/demo/revisions`
 - 音频上传演示：`POST /api/audio/demo`
 - 前端实时字幕工作台
-- 外部英文网课视频播放器与双语字幕浮层：中文同传显示在上方，英文原文同步显示在下方，字幕按视频播放时间逐条出现，后文到达后再触发局部修正
+- 同步素材播放器与双语字幕浮层：默认使用自写英文 TTS 音频，中文同传显示在上方，英文原文同步显示在下方，字幕按音频播放时间逐条出现，后文到达后再触发局部修正
 - 麦克风录音入口
 - 麦克风流式同传入口
 - 音频/视频文件上传入口
@@ -174,7 +175,9 @@ http://127.0.0.1:8000
 .\scripts\generate-demo-audio.ps1
 ```
 
-默认输出为 `assets/demo/demo-en.wav`。该文件用于本地录制 demo 视频，可按比赛仓库体积策略决定是否提交。
+默认输出为 `assets/demo/demo-en.wav`。当前仓库会提交这段约 1.3MB 的自写 TTS 音频，保证评委克隆后可直接复现“音频播放时间 -> 英文原文 -> 中文同传字幕”的同步效果。
+
+主 demo 推荐使用该自写同步素材，而不是公开视频。原因是公开视频没有稳定可控的官方逐句时间轴时，手工字幕容易和真实音频错位；自写素材能精确展示题目要求的实时字幕、后文触发修正和版本轨迹。
 
 如需下载公开视频素材用于本地录屏，可运行：
 
