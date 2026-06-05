@@ -197,7 +197,7 @@ http://127.0.0.1:8000
 如需重新生成本地 demo 视频：
 
 ```powershell
-python -m pip install imageio-ffmpeg edge-tts
+python -m pip install -r scripts\demo-video-requirements.txt
 python scripts\generate-demo-video.py
 ```
 
