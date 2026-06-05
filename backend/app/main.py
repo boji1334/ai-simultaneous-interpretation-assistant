@@ -12,11 +12,16 @@ from app.providers.factory import create_asr_provider, create_translation_provid
 from app.services.audio_stream import AudioStreamEventPump
 from app.services.demo_stream import (
     GLOSSARY,
+    VIDEO_DEMO_SOURCE,
+    VIDEO_GLOSSARY,
     build_demo_events,
+    build_video_demo_events,
     demo_correction_traces,
     final_metrics,
     final_segments,
     subtitle_revision_history,
+    video_demo_correction_traces,
+    video_demo_metrics,
 )
 from app.services.exporter import to_markdown, to_srt
 from app.services.provider_diagnostics import build_provider_diagnostics
@@ -117,6 +122,26 @@ def get_demo_snapshot() -> dict:
     }
 
 
+@app.get("/api/video-demo/source")
+def get_video_demo_source() -> dict:
+    return VIDEO_DEMO_SOURCE.model_dump(by_alias=True)
+
+
+@app.get("/api/video-demo/snapshot")
+def get_video_demo_snapshot() -> dict:
+    events = build_video_demo_events()
+    segments = final_segments(events)
+    return {
+        "source": VIDEO_DEMO_SOURCE.model_dump(by_alias=True),
+        "segments": [segment.model_dump(by_alias=True) for segment in segments],
+        "glossary": [term.model_dump(by_alias=True) for term in VIDEO_GLOSSARY],
+        "metrics": video_demo_metrics().model_dump(by_alias=True),
+        "corrections": [trace.model_dump(by_alias=True) for trace in video_demo_correction_traces()],
+        "revisions": [revision.model_dump(by_alias=True) for revision in subtitle_revision_history(events)],
+        "summary": summarize_segments(segments).model_dump(by_alias=True),
+    }
+
+
 @app.post("/api/audio/demo")
 async def process_demo_audio(file: UploadFile = File(...)) -> dict:
     audio = await file.read()
@@ -141,6 +166,18 @@ async def demo_stream(websocket: WebSocket, speed: float = 1.0) -> None:
     speed = min(max(speed, 0.2), 4.0)
     try:
         for event in build_demo_events():
+            await asyncio.sleep(event.delay_ms / 1000 / speed)
+            await websocket.send_json(event.model_dump(by_alias=True, exclude_none=True))
+    except WebSocketDisconnect:
+        return
+
+
+@app.websocket("/ws/video-demo")
+async def video_demo_stream(websocket: WebSocket, speed: float = 1.0) -> None:
+    await websocket.accept()
+    speed = min(max(speed, 0.2), 4.0)
+    try:
+        for event in build_video_demo_events():
             await asyncio.sleep(event.delay_ms / 1000 / speed)
             await websocket.send_json(event.model_dump(by_alias=True, exclude_none=True))
     except WebSocketDisconnect:

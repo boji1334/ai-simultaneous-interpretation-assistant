@@ -83,6 +83,19 @@ class DemoEvent(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class VideoDemoSource(BaseModel):
+    title: str
+    page_url: str = Field(alias="pageUrl")
+    media_url: str = Field(alias="mediaUrl")
+    license: str
+    attribution: str
+    duration_seconds: int = Field(alias="durationSeconds")
+    scenario: str
+    note: str
+
+    model_config = {"populate_by_name": True}
+
+
 class AudioDemoResult(BaseModel):
     filename: str
     bytes_received: int = Field(alias="bytesReceived")
