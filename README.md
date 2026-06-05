@@ -4,6 +4,13 @@
 
 当前版本已经形成可运行 MVP：后端 FastAPI、前端 React/Vite、WebSocket 实时字幕流、音频分片流式入口、自动修正演示、术语表、量化指标、导出、会后总结、音频上传和麦克风入口均已实现。
 
+## 审阅入口
+
+- 导师审阅说明：[docs/advisor-review.md](docs/advisor-review.md)
+- 比赛规则核对：[docs/competition-audit.md](docs/competition-audit.md)
+- 最终提交清单：[docs/submission-checklist.md](docs/submission-checklist.md)
+- Demo 视频：[final-demo.mp4](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4)
+
 ## 比赛信息
 
 - 比赛方向：七牛云 XEngineer 第三批次
@@ -325,6 +332,7 @@ translate_english/
       tests/
     pyproject.toml
   docs/
+    advisor-review.md
     architecture.md
     competition-audit.md
     demo-material.md
@@ -340,6 +348,7 @@ translate_english/
     package.json
   scripts/
     check.ps1
+    demo-video-requirements.txt
     generate-demo-audio.ps1
     generate-demo-video.py
     pre-submit-audit.ps1
