@@ -75,7 +75,18 @@ This audio is generated from original text in this repository and is suitable fo
 The repository includes a script that generates a narrated MP4 from the demo storyboard:
 
 ```powershell
-python -m pip install imageio-ffmpeg
+python -m pip install imageio-ffmpeg edge-tts
+python scripts\generate-demo-video.py
+```
+
+By default, the script uses Edge Neural TTS (`zh-CN-XiaoxiaoNeural`) for a warmer Chinese narration voice. If the neural TTS dependency or network is unavailable, it falls back to Windows SAPI so the video can still be regenerated offline.
+
+Optional voice tuning:
+
+```powershell
+$env:DEMO_TTS_VOICE = "zh-CN-XiaoxiaoNeural"
+$env:DEMO_TTS_RATE = "+7%"
+$env:DEMO_TTS_PITCH = "+4Hz"
 python scripts\generate-demo-video.py
 ```
 
