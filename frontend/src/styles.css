@@ -132,6 +132,150 @@ button.secondary:hover {
   font-size: 15px;
 }
 
+.video-demo-panel {
+  max-width: 1280px;
+  margin: 0 auto 16px;
+  padding: 18px;
+  border: 1px solid #dce3ed;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.video-demo-panel .section-head {
+  align-items: flex-start;
+}
+
+.video-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.video-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+}
+
+.video-frame {
+  position: relative;
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #111827;
+}
+
+.video-frame video,
+.video-placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.video-frame video {
+  background: #111827;
+}
+
+.video-placeholder {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #d9e4f2;
+  text-align: center;
+}
+
+.video-caption {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 8px;
+  background: rgb(8 13 24 / 88%);
+  color: #ffffff;
+  box-shadow: 0 12px 34px rgb(0 0 0 / 28%);
+}
+
+.video-caption.corrected {
+  border-color: #f4d35e;
+  background: rgb(52 39 6 / 92%);
+}
+
+.video-caption span,
+.video-source-card span {
+  display: block;
+  color: #9fb5d0;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.video-caption strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.video-caption em {
+  display: block;
+  margin-top: 8px;
+  color: #ffe7a1;
+  font-size: 13px;
+  font-style: normal;
+}
+
+.video-source-card {
+  min-height: 320px;
+  padding: 16px;
+  border: 1px solid #d7e0eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.video-source-card strong {
+  display: block;
+  margin-top: 6px;
+  color: #1e2a3c;
+  line-height: 1.35;
+}
+
+.video-source-card p {
+  margin: 12px 0 0;
+  color: #526070;
+  line-height: 1.55;
+}
+
+.video-source-card dl {
+  margin: 14px 0 0;
+}
+
+.video-source-card div {
+  padding: 10px 0;
+  border-top: 1px solid #dfe7f0;
+}
+
+.video-source-card dt {
+  color: #647181;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.video-source-card dd {
+  margin: 4px 0 0;
+  color: #253249;
+  line-height: 1.45;
+}
+
+.video-source-card a {
+  display: inline-flex;
+  margin-top: 10px;
+  color: #1d6b59;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
@@ -422,6 +566,10 @@ button:disabled {
   max-width: 180px;
   color: #526070;
   font-size: 12px;
+}
+
+.upload-control.compact {
+  margin-top: 14px;
 }
 
 .audio-result {
@@ -738,8 +886,14 @@ textarea {
 
   .runtime-strip,
   .workspace,
+  .video-layout,
   .export-panel {
     grid-template-columns: 1fr;
+  }
+
+  .video-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
   }
 
   .side-panel {
@@ -763,6 +917,21 @@ textarea {
 
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .video-demo-panel {
+    padding: 14px;
+  }
+
+  .video-caption {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    padding: 10px 12px;
+  }
+
+  .video-caption strong {
+    font-size: 17px;
   }
 
   .caption-bar {

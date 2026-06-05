@@ -8,6 +8,7 @@ from app.models import (
     SubtitleRevision,
     SubtitleSegment,
     SubtitleStatus,
+    VideoDemoSource,
 )
 from app.services.subtitle_state import CorrectionEngine, SubtitleStateManager
 
@@ -36,6 +37,47 @@ GLOSSARY: list[GlossaryTerm] = [
         target="延迟",
         category="Metric",
         description="从音频输入到字幕出现或修正完成的时间差。",
+    ),
+]
+
+VIDEO_DEMO_SOURCE = VideoDemoSource(
+    title="Welcome (6.002x-1).webm",
+    pageUrl="https://commons.wikimedia.org/wiki/File:Welcome_(6.002x-1).webm",
+    mediaUrl=(
+        "https://upload.wikimedia.org/wikipedia/commons/transcoded/a/a0/"
+        "Welcome_%286.002x-1%29.webm/Welcome_%286.002x-1%29.webm.360p.vp9.webm"
+    ),
+    license="Creative Commons Attribution-Share Alike 4.0",
+    attribution="MIT OpenCourseWare / MITx, via Wikimedia Commons",
+    durationSeconds=129,
+    scenario="Online course video interpretation",
+    note="用于展示观看英文网课时的同步中文字幕；默认字幕流仍由可复现 demo provider 驱动。",
+)
+
+VIDEO_GLOSSARY: list[GlossaryTerm] = [
+    GlossaryTerm(
+        source="MITx",
+        target="MITx",
+        category="Course",
+        description="麻省理工在线学习项目名称，保留原名。",
+    ),
+    GlossaryTerm(
+        source="Circuits and Electronics",
+        target="电路与电子学",
+        category="Course",
+        description="课程名称，应避免误译为普通消费电子产品。",
+    ),
+    GlossaryTerm(
+        source="online learning",
+        target="在线学习",
+        category="Education",
+        description="网课和开放课程场景中的常用术语。",
+    ),
+    GlossaryTerm(
+        source="electrical engineering",
+        target="电气工程",
+        category="Discipline",
+        description="学科名称，需保持专业一致性。",
     ),
 ]
 
@@ -104,6 +146,26 @@ def demo_correction_traces() -> list[CorrectionTrace]:
 
 def final_metrics() -> MetricSnapshot:
     return _metrics(820, 1480, 1.0, 0.8, 1, 4, 5)
+
+
+def video_demo_correction_traces() -> list[CorrectionTrace]:
+    return [
+        CorrectionTrace(
+            segmentId="video-002",
+            trigger="后续上下文确认课程名称 Circuits and Electronics",
+            reason="术语表将课程名锁定为“电路与电子学”，回溯修正先前将 electronics 误译为“电子产品”的字幕。",
+            previousTranslation="欢迎来到 6.002x：电路和电子产品。",
+            correctedTranslation="欢迎来到 6.002x：电路与电子学。",
+            changedTerms=["Circuits and Electronics"],
+            latencyMs=1210,
+            fromVersion=1,
+            toVersion=2,
+        )
+    ]
+
+
+def video_demo_metrics() -> MetricSnapshot:
+    return _metrics(760, 1210, 1.0, 0.8, 1, 4, 5)
 
 
 def build_demo_events() -> list[DemoEvent]:
@@ -259,6 +321,158 @@ def build_demo_events() -> list[DemoEvent]:
             metrics=final_metrics(),
         ),
         DemoEvent(type="done", message="demo-session-complete", delayMs=120),
+    ]
+
+
+def build_video_demo_events() -> list[DemoEvent]:
+    """Build a deterministic stream for an external online-course video scene."""
+    correction_trace = video_demo_correction_traces()[0]
+
+    return [
+        DemoEvent(type="session", message="video-demo-session-started", delayMs=100),
+        DemoEvent(type="glossary", glossary=VIDEO_GLOSSARY, delayMs=100),
+        DemoEvent(
+            type="segment",
+            delayMs=430,
+            segment=_segment(
+                "video-001",
+                "Welcome to MITx, a worldwide online learning initiative.",
+                "欢迎来到 MITx，这是一个面向全球的在线学习项目。",
+                SubtitleStatus.PARTIAL,
+                1,
+                0.0,
+                4.8,
+                0.81,
+                ["MITx", "online learning"],
+            ),
+        ),
+        DemoEvent(
+            type="metric",
+            delayMs=60,
+            metrics=_metrics(760, None, 0.5, 0.0, 0, 0, 1),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=520,
+            segment=_segment(
+                "video-001",
+                "Welcome to MITx, a worldwide online learning initiative.",
+                "欢迎来到 MITx，这是一个面向全球的在线学习项目。",
+                SubtitleStatus.FINAL,
+                2,
+                0.0,
+                4.8,
+                0.96,
+                ["MITx", "online learning"],
+            ),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=620,
+            segment=_segment(
+                "video-002",
+                "This course is 6.002x, Circuits and Electronics.",
+                "欢迎来到 6.002x：电路和电子产品。",
+                SubtitleStatus.STABLE,
+                1,
+                4.9,
+                9.8,
+                0.72,
+                ["Circuits and Electronics"],
+            ),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=560,
+            segment=_segment(
+                "video-003",
+                "The following lessons explain the foundations of electrical engineering.",
+                "接下来的课程会讲解电气工程的基础。",
+                SubtitleStatus.PARTIAL,
+                1,
+                10.0,
+                15.0,
+                0.85,
+                ["electrical engineering"],
+            ),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=220,
+            message="video-window-correction",
+            segment=_segment(
+                "video-002",
+                "This course is 6.002x, Circuits and Electronics.",
+                "欢迎来到 6.002x：电路与电子学。",
+                SubtitleStatus.CORRECTED,
+                2,
+                4.9,
+                9.8,
+                0.95,
+                ["Circuits and Electronics"],
+                "欢迎来到 6.002x：电路和电子产品。",
+            ),
+        ),
+        DemoEvent(
+            type="correction",
+            delayMs=20,
+            message="video-correction-trace-created",
+            correction=correction_trace,
+        ),
+        DemoEvent(
+            type="metric",
+            delayMs=80,
+            metrics=_metrics(760, 1210, 0.75, 0.67, 1, 2, 3),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=520,
+            segment=_segment(
+                "video-003",
+                "The following lessons explain the foundations of electrical engineering.",
+                "接下来的课程会讲解电气工程的基础。",
+                SubtitleStatus.FINAL,
+                2,
+                10.0,
+                15.0,
+                0.97,
+                ["electrical engineering"],
+            ),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=560,
+            segment=_segment(
+                "video-004",
+                "The subtitle stream stays close to the pace of the speaker.",
+                "字幕流会尽量贴近讲者的语速。",
+                SubtitleStatus.FINAL,
+                1,
+                15.2,
+                20.0,
+                0.94,
+            ),
+        ),
+        DemoEvent(
+            type="segment",
+            delayMs=560,
+            segment=_segment(
+                "video-005",
+                "When later context arrives, the assistant can repair earlier subtitles.",
+                "当后续上下文到达时，助手可以修正之前的字幕。",
+                SubtitleStatus.FINAL,
+                1,
+                20.2,
+                25.4,
+                0.95,
+            ),
+        ),
+        DemoEvent(
+            type="metric",
+            delayMs=80,
+            metrics=video_demo_metrics(),
+        ),
+        DemoEvent(type="done", message="video-demo-session-complete", delayMs=120),
     ]
 
 

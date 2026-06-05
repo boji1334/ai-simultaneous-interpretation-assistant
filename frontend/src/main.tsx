@@ -96,6 +96,17 @@ type ProviderDiagnosticsPayload = {
   diagnostics: ProviderDiagnostic[];
 };
 
+type VideoDemoSource = {
+  title: string;
+  pageUrl: string;
+  mediaUrl: string;
+  license: string;
+  attribution: string;
+  durationSeconds: number;
+  scenario: string;
+  note: string;
+};
+
 type ExportPayload = {
   filename: string;
   content: string;
@@ -120,6 +131,7 @@ type DemoSnapshot = {
 };
 
 const WS_URL = `${websocketUrl("/ws/demo")}?speed=1.35`;
+const VIDEO_DEMO_WS_URL = `${websocketUrl("/ws/video-demo")}?speed=1.25`;
 const AUDIO_STREAM_WS_URL = websocketUrl("/ws/audio-stream");
 
 const statusLabel: Record<SubtitleStatus, string> = {
@@ -237,12 +249,26 @@ function App() {
   const [streamRecorder, setStreamRecorder] = useState<MediaRecorder | null>(null);
   const [isStreamingAudio, setIsStreamingAudio] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [videoSource, setVideoSource] = useState<VideoDemoSource | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoTime, setVideoTime] = useState(0);
   const demoSocketRef = useRef<WebSocket | null>(null);
   const audioSocketRef = useRef<WebSocket | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const spokenSegmentIds = useRef(new Set<string>());
 
   const exportText = useMemo(() => buildExportText(segments), [segments]);
   const currentSegment = segments.at(-1);
+  const activeVideoSegment = useMemo(() => {
+    const timedSegment = [...segments]
+      .reverse()
+      .find((segment) => {
+        const start = segment.startTime - 0.35;
+        const end = segment.endTime === undefined ? Number.POSITIVE_INFINITY : segment.endTime + 0.8;
+        return videoTime >= start && videoTime <= end;
+      });
+    return timedSegment ?? currentSegment;
+  }, [currentSegment, segments, videoTime]);
   const correctedSegment = segments.find((segment) => segment.status === "corrected");
   const revisionGroups = useMemo(() => {
     return revisions.reduce<Record<string, SubtitleRevision[]>>((groups, revision) => {
@@ -308,6 +334,7 @@ function App() {
       if (payload.segment) {
         const segment = payload.segment as SubtitleSegment;
         setSegments((items) => upsertSegment(items, segment));
+        setRevisions((items) => upsertRevision(items, segment));
         speakSegment(segment);
       }
 
@@ -467,6 +494,129 @@ function App() {
       setConnectionState("加载失败");
       setLastMessage("完整演示快照加载失败，请检查后端服务");
     }
+  };
+
+  const loadVideoDemoSource = async () => {
+    try {
+      const source = await fetchJson<VideoDemoSource>(`${API_BASE}/api/video-demo/source`);
+      setVideoSource(source);
+      setVideoUrl(source.mediaUrl);
+      setLastMessage("已加载 Wikimedia 公开网课视频素材");
+      return source;
+    } catch {
+      setLastMessage("外部视频素材加载失败，请检查后端服务");
+      return null;
+    }
+  };
+
+  const loadLocalVideo = (file: File | null) => {
+    if (!file) {
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setVideoUrl(objectUrl);
+    setVideoSource({
+      title: file.name,
+      pageUrl: "",
+      mediaUrl: objectUrl,
+      license: "Local demo file",
+      attribution: "User provided local file",
+      durationSeconds: 0,
+      scenario: "Local video interpretation",
+      note: "本地文件仅用于现场演示，不会上传到后端。"
+    });
+    setLastMessage(`已加载本地视频：${file.name}`);
+  };
+
+  const startVideoDemo = async () => {
+    demoSocketRef.current?.close();
+    audioSocketRef.current?.close();
+
+    const source = videoSource ?? (await loadVideoDemoSource());
+    if (!source) {
+      return;
+    }
+
+    setVideoUrl(source.mediaUrl);
+    setSegments([]);
+    setGlossary([]);
+    setCorrectionTraces([]);
+    setRevisions([]);
+    setSummary(null);
+    setMetrics({
+      firstSubtitleLatencyMs: null,
+      correctionLatencyMs: null,
+      glossaryHitRate: 0,
+      finalStabilityRate: 0,
+      correctionCount: 0,
+      finalCount: 0,
+      subtitleCount: 0
+    });
+    spokenSegmentIds.current.clear();
+    setVideoTime(0);
+    setConnectionState("视频同传连接中");
+    setLastMessage("正在连接外部视频同传字幕流");
+
+    window.setTimeout(() => {
+      if (!videoRef.current) {
+        return;
+      }
+      videoRef.current.load();
+      videoRef.current.currentTime = 0;
+      void videoRef.current.play().catch(() => {
+        setLastMessage("浏览器阻止自动播放，请手动点击视频播放，同时字幕流会继续运行");
+      });
+    }, 0);
+
+    const socket = new WebSocket(VIDEO_DEMO_WS_URL);
+    demoSocketRef.current = socket;
+
+    socket.onopen = () => {
+      if (demoSocketRef.current !== socket) {
+        return;
+      }
+      setConnectionState("视频同传中");
+      setLastMessage("外部视频与中文字幕流已同步启动");
+    };
+
+    socket.onmessage = (event) => {
+      if (demoSocketRef.current !== socket) {
+        return;
+      }
+
+      let payload: DemoEvent;
+      try {
+        payload = JSON.parse(event.data) as DemoEvent;
+      } catch {
+        setConnectionState("解析失败");
+        setLastMessage("收到无法解析的视频字幕事件");
+        socket.close();
+        return;
+      }
+
+      handleStreamEvent(payload);
+      if (payload.type === "done") {
+        setConnectionState("视频同传完成");
+        setLastMessage("视频同传演示完成，可查看修正时间线和版本轨迹");
+        demoSocketRef.current = null;
+        socket.close();
+      }
+    };
+
+    socket.onerror = () => {
+      if (demoSocketRef.current !== socket) {
+        return;
+      }
+      setConnectionState("视频同传失败");
+      setLastMessage("无法连接视频同传流，请确认 FastAPI 服务已启动");
+      demoSocketRef.current = null;
+    };
+
+    socket.onclose = () => {
+      if (demoSocketRef.current === socket) {
+        demoSocketRef.current = null;
+      }
+    };
   };
 
   const uploadAudio = async (file: File | null) => {
@@ -693,6 +843,83 @@ function App() {
         <div>
           <span>当前事件</span>
           <strong>{lastMessage}</strong>
+        </div>
+      </section>
+
+      <section className="video-demo-panel" aria-label="外部视频同传演示">
+        <div className="section-head">
+          <div>
+            <h2>外部英文视频同传</h2>
+            <p>加载公开视频或本地视频，同步展示中文字幕、修正高亮和版本轨迹。</p>
+          </div>
+          <div className="video-actions">
+            <button type="button" className="secondary" onClick={loadVideoDemoSource}>
+              加载公开网课视频
+            </button>
+            <button type="button" onClick={startVideoDemo}>
+              启动视频同传
+            </button>
+          </div>
+        </div>
+
+        <div className="video-layout">
+          <div className="video-frame">
+            {videoUrl ? (
+              <video
+                ref={videoRef}
+                controls
+                preload="metadata"
+                src={videoUrl}
+                onTimeUpdate={(event) => setVideoTime(event.currentTarget.currentTime)}
+              />
+            ) : (
+              <div className="video-placeholder">加载公开网课视频后，可在这里观看同步中文字幕。</div>
+            )}
+            {activeVideoSegment && (
+              <div className={`video-caption ${activeVideoSegment.status}`}>
+                <span>{statusLabel[activeVideoSegment.status]} · v{activeVideoSegment.version}</span>
+                <strong>{activeVideoSegment.translatedText}</strong>
+                {activeVideoSegment.previousTranslation && (
+                  <em>修正前：{activeVideoSegment.previousTranslation}</em>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="video-source-card">
+            <span>视频素材</span>
+            <strong>{videoSource?.title ?? "尚未加载"}</strong>
+            <p>{videoSource?.note ?? "建议使用自写、自录、公共领域或 Creative Commons 授权视频。"}</p>
+            {videoSource && (
+              <dl>
+                <div>
+                  <dt>场景</dt>
+                  <dd>{videoSource.scenario}</dd>
+                </div>
+                <div>
+                  <dt>许可</dt>
+                  <dd>{videoSource.license}</dd>
+                </div>
+                <div>
+                  <dt>署名</dt>
+                  <dd>{videoSource.attribution}</dd>
+                </div>
+              </dl>
+            )}
+            {videoSource?.pageUrl && (
+              <a href={videoSource.pageUrl} target="_blank" rel="noreferrer">
+                查看素材来源页
+              </a>
+            )}
+            <label className="upload-control compact">
+              <span>替换本地视频</span>
+              <input
+                type="file"
+                accept="video/*"
+                onChange={(event) => loadLocalVideo(event.currentTarget.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
         </div>
       </section>
 

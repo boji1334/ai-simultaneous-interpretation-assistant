@@ -242,6 +242,57 @@ def test_demo_snapshot_contains_complete_fallback_state() -> None:
     assert payload["summary"]["title"] == "实时 AI 同声传译演示总结"
 
 
+def test_video_demo_source_exposes_license_and_media_url() -> None:
+    client = TestClient(app)
+
+    response = client.get("/api/video-demo/source")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["title"] == "Welcome (6.002x-1).webm"
+    assert payload["mediaUrl"].startswith("https://upload.wikimedia.org/")
+    assert "Creative Commons" in payload["license"]
+    assert "online course" in payload["scenario"].lower()
+
+
+def test_video_demo_snapshot_contains_corrected_course_term() -> None:
+    client = TestClient(app)
+
+    response = client.get("/api/video-demo/snapshot")
+
+    assert response.status_code == 200
+    payload = response.json()
+    corrected = next(segment for segment in payload["segments"] if segment["id"] == "video-002")
+    assert corrected["status"] == "corrected"
+    assert "电路与电子学" in corrected["translatedText"]
+    assert payload["corrections"][0]["segmentId"] == "video-002"
+    assert payload["metrics"]["correctionLatencyMs"] == 1210
+    assert any(term["source"] == "Circuits and Electronics" for term in payload["glossary"])
+
+
+def test_video_demo_websocket_stream_exposes_correction() -> None:
+    client = TestClient(app)
+
+    with client.websocket_connect("/ws/video-demo?speed=4") as websocket:
+        corrected_seen = False
+        correction_trace_seen = False
+        done_seen = False
+        while not done_seen:
+            event = websocket.receive_json()
+            if event["type"] == "segment":
+                segment = event["segment"]
+                corrected_seen = corrected_seen or (
+                    segment["id"] == "video-002" and segment["status"] == "corrected"
+                )
+            if event["type"] == "correction":
+                correction_trace_seen = event["correction"]["segmentId"] == "video-002"
+            done_seen = event["type"] == "done"
+
+    assert corrected_seen
+    assert correction_trace_seen
+    assert done_seen
+
+
 def test_correction_engine_repairs_recent_segment() -> None:
     corrected = apply_demo_correction()
 

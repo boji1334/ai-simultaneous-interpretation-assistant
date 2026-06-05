@@ -44,7 +44,10 @@
 - Provider 状态：`GET /api/providers`
 - Provider 诊断：`GET /api/providers/diagnostics`
 - 实时演示流：`GET /ws/demo`
+- 外部视频演示流：`GET /ws/video-demo`
 - 音频分片流式同传：`GET /ws/audio-stream`
+- 外部视频素材：`GET /api/video-demo/source`
+- 外部视频快照：`GET /api/video-demo/snapshot`
 - 最终字幕：`GET /api/demo/transcript`
 - 完整演示快照：`GET /api/demo/snapshot`
 - 字幕导出：`GET /api/demo/export?format=markdown|srt`
@@ -53,6 +56,7 @@
 - 字幕版本轨迹：`GET /api/demo/revisions`
 - 音频上传演示：`POST /api/audio/demo`
 - 前端实时字幕工作台
+- 外部英文网课视频播放器与同步中文字幕浮层
 - 麦克风录音入口
 - 麦克风流式同传入口
 - 音频/视频文件上传入口
@@ -171,6 +175,14 @@ http://127.0.0.1:8000
 ```
 
 默认输出为 `assets/demo/demo-en.wav`。该文件用于本地录制 demo 视频，可按比赛仓库体积策略决定是否提交。
+
+如需下载公开视频素材用于本地录屏，可运行：
+
+```powershell
+.\scripts\download-demo-video.ps1
+```
+
+默认下载 Wikimedia Commons 上的 MITx 在线课程欢迎视频到 `assets/demo/external-course-demo.webm`。视频文件由 `.gitignore` 排除，仓库只保留下载脚本、来源页、授权说明和演示代码。
 
 Demo 视频链接将在最终提交阶段更新到 README；当前仓库已提供可复现的本地演示流程、脚本和演示素材说明。
 

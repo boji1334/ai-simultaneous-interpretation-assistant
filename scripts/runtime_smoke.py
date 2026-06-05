@@ -59,6 +59,15 @@ async def check_http_endpoints() -> None:
         export_payload = (await client.get(f"{BASE_URL}/api/demo/export?format=srt")).json()
         assert_true("00:00:07,700 --> 00:00:11,500" in export_payload["content"], "SRT export invalid.")
 
+        video_source = (await client.get(f"{BASE_URL}/api/video-demo/source")).json()
+        assert_true("Creative Commons" in video_source["license"], "Video source license missing.")
+        assert_true(video_source["mediaUrl"].startswith("https://upload.wikimedia.org/"), "Video media URL invalid.")
+
+        video_snapshot = (await client.get(f"{BASE_URL}/api/video-demo/snapshot")).json()
+        video_corrected = next(segment for segment in video_snapshot["segments"] if segment["id"] == "video-002")
+        assert_true(video_corrected["status"] == "corrected", "Video demo did not expose corrected segment.")
+        assert_true("电路与电子学" in video_corrected["translatedText"], "Video demo correction missing target term.")
+
 
 async def check_demo_websocket() -> None:
     events: list[dict[str, Any]] = []
@@ -75,6 +84,23 @@ async def check_demo_websocket() -> None:
         "Demo stream missing corrected subtitle.",
     )
     assert_true(any(event["type"] == "correction" for event in events), "Demo stream missing correction trace.")
+
+
+async def check_video_demo_websocket() -> None:
+    events: list[dict[str, Any]] = []
+    async with connect(f"{WS_BASE}/ws/video-demo?speed=4") as websocket:
+        while True:
+            event = json.loads(await websocket.recv())
+            events.append(event)
+            if event["type"] == "done":
+                break
+
+    assert_true(any(event["type"] == "metric" for event in events), "Video demo stream missing metrics.")
+    assert_true(
+        any(event.get("segment", {}).get("id") == "video-002" and event.get("segment", {}).get("status") == "corrected" for event in events),
+        "Video demo stream missing corrected course subtitle.",
+    )
+    assert_true(any(event["type"] == "correction" for event in events), "Video demo stream missing correction trace.")
 
 
 async def check_audio_stream_websocket() -> None:
@@ -106,6 +132,7 @@ async def main() -> None:
     await wait_for_health()
     await check_http_endpoints()
     await check_demo_websocket()
+    await check_video_demo_websocket()
     await check_audio_stream_websocket()
     print("Runtime smoke checks passed.")
 
