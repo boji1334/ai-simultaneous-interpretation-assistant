@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import math
+import re
 import subprocess
-import textwrap
 import wave
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,15 +22,25 @@ SCENE_AUDIO_DIR = ASSET_DIR / ".demo-video-audio"
 
 WIDTH = 1280
 HEIGHT = 720
-FPS = 10
+FPS = 12
 
 FONT_REGULAR = Path("C:/Windows/Fonts/NotoSansSC-VF.ttf")
 FONT_BOLD = Path("C:/Windows/Fonts/simhei.ttf")
+
+INK = "#172234"
+MUTED = "#667386"
+BG = "#f5f8fc"
+NAVY = "#111d2f"
+GREEN = "#1d8f6f"
+GOLD = "#f4d35e"
+BLUE = "#2f6fd6"
+LINE = "#d8e2ee"
 
 
 @dataclass
 class Scene:
     title: str
+    claim: str
     narration: str
     kind: str
     bullets: list[str]
@@ -39,105 +49,385 @@ class Scene:
 SCENES = [
     Scene(
         title="AI 同声传译助手",
-        kind="opening",
+        claim="把单向英文音频流实时翻译成中文，并能回头修正前文错误。",
+        kind="cover",
         narration=(
-            "大家好，这是我们的 AI 同声传译助手。它面向英文技术分享、国际会议和网课场景，"
-            "把单向英文音频流实时翻译成中文字幕，并且能够在后文信息到达后，自动修正前文的识别或翻译错误。"
+            "大家好，这是我们的 AI 同声传译助手。它面向英文演讲、技术分享、国际会议和网课场景。"
+            "系统将单向英文音频流实时翻译成中文字幕，并在后文信息到达后，自动纠正之前的识别或翻译错误。"
         ),
-        bullets=[
-            "题目要求：实时、流畅翻译单向音频流",
-            "呈现方式：中文字幕为主，可选语音播报",
-            "核心能力：自动纠正之前识别或翻译的错误",
-        ],
+        bullets=["实时中文字幕", "上下文回溯修正", "可复现演示材料"],
+    ),
+    Scene(
+        title="核心难点",
+        claim="同传不是简单串联 ASR 和翻译，真正难点是低延迟与后文纠错同时成立。",
+        kind="challenge",
+        narration=(
+            "这个题目的关键不是把 ASR 和翻译接口简单串起来，而是要在低延迟和准确性之间取得平衡。"
+            "我们用字幕状态机先快速给出可读结果，再允许后续上下文触发局部修正。"
+        ),
+        bullets=["低延迟：先显示 partial / stable", "高准确：后文触发 corrected", "低打扰：只修正局部字幕"],
     ),
     Scene(
         title="系统架构",
+        claim="Provider 可替换，核心原创逻辑集中在字幕状态机和修正引擎。",
         kind="architecture",
         narration=(
-            "系统采用 React 前端和 FastAPI 后端。音频事件通过 WebSocket 流式进入，"
-            "再经过 ASR Provider、翻译 Provider、字幕状态机和上下文修正引擎。"
-            "ASR 和翻译能力可以替换成本地 faster-whisper 或云端接口，原创重点放在状态流转和修正逻辑。"
+            "系统采用 React 前端和 FastAPI 后端。音频事件经由 WebSocket 流式进入，"
+            "再经过 ASR Provider、翻译 Provider、字幕状态机和修正引擎。"
+            "真实 ASR 可以替换成本地 faster-whisper，翻译也可以替换成云端接口。"
         ),
-        bullets=[
-            "Provider 可插拔：Mock、faster-whisper、云端翻译接口",
-            "字幕状态：partial、stable、corrected、final",
-            "修正链路：术语表 + 滑动窗口 + 版本轨迹",
-        ],
+        bullets=["React / Vite / TypeScript", "FastAPI / WebSocket", "Mock、faster-whisper、云翻译可切换"],
     ),
     Scene(
         title="实时字幕流",
+        claim="同一条字幕从临时、稳定、已修正到最终状态，完整回应“实时”和“修正”。",
         kind="stream",
         narration=(
-            "启动实时演示后，字幕不是一次性加载，而是按事件逐条出现。"
-            "同一条字幕可以先快速显示临时版本，再变成稳定版本，最后进入最终状态。"
-            "这样可以同时兼顾低延迟和可读性。"
+            "启动实时演示后，字幕按事件逐条出现，不是一次性加载。"
+            "每条字幕有明确状态，可以从临时变稳定，也可以在上下文到达后被修正，最后进入最终状态并用于导出。"
         ),
-        bullets=[
-            "首字幕延迟：约 820 毫秒",
-            "字幕可从临时状态升级为最终状态",
-            "最终字幕可导出为 Markdown 或 SRT",
-        ],
+        bullets=["首字幕延迟约 820ms", "状态：partial -> stable -> corrected -> final", "最终字幕支持 Markdown / SRT 导出"],
     ),
     Scene(
-        title="修正能力：黄金时刻",
+        title="修正能力",
+        claim="后文出现 attention mechanism 后，系统把“张力机制”回溯修正为“注意力机制”。",
         kind="correction",
         narration=(
-            "重点看修正能力。系统一开始把 tension mechanism 翻译成张力机制，"
-            "这是一个看似合理但在上下文中错误的翻译。后文出现 attention mechanism 后，"
-            "滑动窗口和术语表共同触发回溯修正，把前文改成注意力机制，并保留修正前文本、触发原因和版本变化。"
+            "重点看修正能力。系统一开始把 tension mechanism 翻成张力机制。"
+            "后文出现 attention mechanism 后，术语表和滑动窗口确认语义，回头把前文修正为注意力机制。"
+            "修正过程保留原因、延迟和版本变化。"
         ),
-        bullets=[
-            "修正前：这个模型使用张力机制来判断哪些词更重要。",
-            "修正后：这个模型使用注意力机制来判断哪些词更重要。",
-            "修正记录：1480ms，v1 -> v2，attention mechanism",
-        ],
+        bullets=["修正延迟：1480ms", "版本变化：v1 -> v2", "修正记录可审计"],
     ),
     Scene(
         title="同步素材同传",
+        claim="主 demo 使用自写英文音频，字幕由播放时间驱动，避免公开视频时间轴错位。",
         kind="synced",
         narration=(
-            "为了保证比赛演示稳定，我们的主 demo 使用自写英文脚本生成的 TTS 音频。"
-            "播放器按真实音频时间显示双语字幕：中文同传在上，英文原文在下。"
-            "十四秒左右先出现错误译文，二十一秒左右后文到达后，播放器浮层会闪现已修正字幕。"
+            "为了保证比赛演示稳定，主 demo 使用自写英文脚本生成的 TTS 音频。"
+            "播放器按真实音频时间同步显示字幕：中文同传在上，英文原文在下。"
+            "十四秒左右先出现错误译文，二十一秒左右后文到达后闪现已修正字幕。"
         ),
-        bullets=[
-            "自写素材：无版权风险，可复现",
-            "严格同步：音频 currentTime 驱动字幕显示",
-            "展示题目核心：实时翻译 + 后文触发修正",
-        ],
+        bullets=["自写音频：无版权风险", "字幕跟随 currentTime", "中文在上，英文在下"],
     ),
     Scene(
-        title="可审计输出",
+        title="演示闭环",
+        claim="修正时间线、版本轨迹、术语表、指标、导出和总结构成完整产品闭环。",
         kind="audit",
         narration=(
-            "右侧面板会展示修正时间线、字幕版本轨迹、术语表、量化指标和会后总结。"
-            "这让自动修正不再是一次静默覆盖，而是可解释、可审计、可复盘的工程行为。"
+            "除了播放器本身，右侧面板还会展示修正时间线、版本轨迹、术语表、量化指标和会后总结。"
+            "这让自动修正不是静默覆盖，而是可解释、可审计、可复盘的产品能力。"
         ),
-        bullets=[
-            "修正时间线：触发原因、延迟、前后版本",
-            "量化指标：首字幕延迟、修正延迟、术语命中率",
-            "会后总结：关键点、术语、修正说明",
-        ],
+        bullets=["修正时间线：原因、延迟、版本", "量化指标：首字幕延迟、术语命中率", "会后复盘：总结、关键词、导出"],
     ),
     Scene(
-        title="工程与提交质量",
+        title="工程质量",
+        claim="项目已具备可运行主分支、测试、CI、冒烟验收、README 和 demo 视频。",
         kind="quality",
         narration=(
-            "工程侧已经提供测试、单服务冒烟、提交前审计和完整 README。"
-            "仓库通过多个小 PR 持续迭代，主分支保持可运行。"
-            "最终评审时，评委可以直接运行脚本，复现同步同传、自动修正、导出和总结能力。"
+            "工程侧已经提供后端测试、前端构建、单服务冒烟和提交前审计。"
+            "仓库通过多个小 PR 持续交付，主分支保持可运行。"
+            "评委可以直接根据 README 复现同步同传、自动修正、导出和总结能力。"
         ),
-        bullets=[
-            "后端测试：26 个用例通过",
-            "单服务复现：http://127.0.0.1:8000",
-            "PR 记录：MVP、时间同步、双语浮层、同步素材",
-        ],
+        bullets=["26 个后端测试通过", "单服务地址：http://127.0.0.1:8000", "README、Release 视频、PR 记录齐备"],
     ),
 ]
 
 
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(FONT_BOLD if bold else FONT_REGULAR), size=size)
+
+
+def text_size(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont) -> tuple[int, int]:
+    box = draw.textbbox((0, 0), text, font=fnt)
+    return box[2] - box[0], box[3] - box[1]
+
+
+def tokens(text: str) -> list[str]:
+    pattern = r"[A-Za-z0-9][A-Za-z0-9_+./:()%-]*|[\u4e00-\u9fff]|[^\s]"
+    return re.findall(pattern, text)
+
+
+def wrap_text(draw: ImageDraw.ImageDraw, text: str, fnt: ImageFont.FreeTypeFont, width: int) -> list[str]:
+    lines: list[str] = []
+    for paragraph in text.splitlines() or [text]:
+        current = ""
+        for token in tokens(paragraph):
+            joiner = "" if not current or re.fullmatch(r"[\u4e00-\u9fff]|[^\w\s]", token) else " "
+            candidate = f"{current}{joiner}{token}" if current else token
+            if text_size(draw, candidate, fnt)[0] <= width:
+                current = candidate
+                continue
+            if current:
+                lines.append(current)
+            if text_size(draw, token, fnt)[0] <= width:
+                current = token
+            else:
+                current = ""
+                chunk = ""
+                for char in token:
+                    candidate = chunk + char
+                    if text_size(draw, candidate, fnt)[0] <= width:
+                        chunk = candidate
+                    else:
+                        if chunk:
+                            lines.append(chunk)
+                        chunk = char
+                current = chunk
+        if current:
+            lines.append(current)
+    return lines
+
+
+def draw_fit_text(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    text: str,
+    max_size: int,
+    min_size: int,
+    fill: str,
+    bold: bool = False,
+    align: str = "left",
+    valign: str = "top",
+    line_gap: int = 6,
+) -> int:
+    x1, y1, x2, y2 = box
+    width = x2 - x1
+    height = y2 - y1
+    chosen_font = font(min_size, bold)
+    chosen_lines = wrap_text(draw, text, chosen_font, width)
+    chosen_gap = max(2, min(line_gap, 5))
+    for size in range(max_size, min_size - 1, -1):
+        fnt = font(size, bold)
+        lines = wrap_text(draw, text, fnt, width)
+        gap = max(2, int(size * 0.22))
+        total = len(lines) * size + max(0, len(lines) - 1) * gap
+        if total <= height and all(text_size(draw, line, fnt)[0] <= width for line in lines):
+            chosen_font = fnt
+            chosen_lines = lines
+            chosen_gap = gap
+            break
+    total_height = len(chosen_lines) * chosen_font.size + max(0, len(chosen_lines) - 1) * chosen_gap
+    y = y1
+    if valign == "middle":
+        y = y1 + max(0, (height - total_height) // 2)
+    elif valign == "bottom":
+        y = y2 - total_height
+    for line in chosen_lines:
+        line_width = text_size(draw, line, chosen_font)[0]
+        x = x1
+        if align == "center":
+            x = x1 + max(0, (width - line_width) // 2)
+        elif align == "right":
+            x = x2 - line_width
+        draw.text((x, y), line, font=chosen_font, fill=fill)
+        y += chosen_font.size + chosen_gap
+    return y
+
+
+def rounded(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str, outline: str | None = None, radius: int = 8) -> None:
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=2 if outline else 1)
+
+
+def base_slide(scene: Scene, index: int, dark: bool = False) -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    img = Image.new("RGB", (WIDTH, HEIGHT), NAVY if dark else BG)
+    draw = ImageDraw.Draw(img)
+    if not dark:
+        draw.rectangle((0, 0, WIDTH, 84), fill=NAVY)
+        draw.text((52, 24), "AI 同声传译助手", font=font(27, True), fill="#ffffff")
+        draw.text((1060, 28), f"{index + 1:02d} / {len(SCENES):02d}", font=font(20), fill="#b8cbe3")
+        draw_fit_text(draw, (52, 112, 780, 166), scene.title, 39, 30, INK, bold=True)
+        draw_fit_text(draw, (54, 166, 760, 222), scene.claim, 21, 16, "#536176", line_gap=3)
+    return img, draw
+
+
+def draw_side_notes(draw: ImageDraw.ImageDraw, bullets: list[str]) -> None:
+    x, y, w = 842, 154, 350
+    draw.text((x, y - 42), "评审看点", font=font(24, True), fill=INK)
+    for item in bullets:
+        rounded(draw, (x, y, x + w, y + 82), "#ffffff", LINE, 8)
+        draw.ellipse((x + 18, y + 29, x + 38, y + 49), fill=GREEN)
+        draw_fit_text(draw, (x + 54, y + 16, x + w - 18, y + 68), item, 22, 15, "#243247", bold=True, valign="middle")
+        y += 102
+
+
+def draw_pill(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, color: str) -> None:
+    x, y = xy
+    w = text_size(draw, text, font(22, True))[0] + 44
+    rounded(draw, (x, y, x + w, y + 48), color, None, 24)
+    draw_fit_text(draw, (x + 20, y + 8, x + w - 20, y + 40), text, 22, 18, "#ffffff", bold=True, align="center")
+
+
+def draw_cover(scene: Scene, index: int) -> Image.Image:
+    img, draw = base_slide(scene, index, dark=True)
+    draw.rectangle((0, 0, WIDTH, HEIGHT), fill=NAVY)
+    draw.rectangle((0, 0, 14, HEIGHT), fill=GREEN)
+    draw_fit_text(draw, (82, 88, 760, 160), "题目二", 30, 24, "#6ee7b7", bold=True)
+    draw_fit_text(draw, (82, 162, 850, 276), scene.title, 66, 52, "#ffffff", bold=True)
+    draw_fit_text(draw, (86, 292, 810, 372), scene.claim, 30, 23, "#cfe0f3", bold=True)
+    draw_pill(draw, (84, 430), "实时", GREEN)
+    draw_pill(draw, (214, 430), "中文呈现", BLUE)
+    draw_pill(draw, (390, 430), "自动修正", "#c49513")
+    rounded(draw, (842, 118, 1166, 520), "#18263b", "#31445d", 8)
+    draw_fit_text(draw, (884, 160, 1128, 232), "Demo 主线", 34, 28, "#ffffff", bold=True)
+    draw_fit_text(draw, (884, 252, 1120, 438), "单向音频流\n实时中文字幕\n后文触发回溯修正\n版本轨迹可审计", 28, 20, "#d9e8f8", bold=True, line_gap=10)
+    return img
+
+
+def draw_challenge(scene: Scene, index: int) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    cards = [
+        ("低延迟", "先给用户可读字幕", "#e6f5ef", GREEN),
+        ("后文信息", "语义到达后重新判断", "#fff6d8", "#c49513"),
+        ("局部修正", "只更新最近相关字幕", "#eaf1ff", BLUE),
+    ]
+    x = 68
+    for title, body, fill, accent in cards:
+        rounded(draw, (x, 292, x + 224, 512), fill, "#cfd9e6", 8)
+        draw.rectangle((x, 292, x + 224, 302), fill=accent)
+        draw_fit_text(draw, (x + 24, 334, x + 200, 386), title, 32, 24, INK, bold=True, align="center")
+        draw_fit_text(draw, (x + 26, 406, x + 198, 470), body, 22, 16, "#46556a", bold=True, align="center", valign="middle")
+        x += 250
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def draw_architecture(scene: Scene, index: int) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    labels = ["音频流", "ASR", "翻译", "状态机", "修正引擎", "字幕 UI"]
+    x, y = 64, 330
+    w = 96
+    gap = 34
+    for i, label in enumerate(labels):
+        rounded(draw, (x, y, x + w, y + 82), "#ffffff", "#cfd9e6", 8)
+        draw_fit_text(draw, (x + 8, y + 22, x + w - 8, y + 58), label, 20, 14, INK, bold=True, align="center", valign="middle")
+        if i < len(labels) - 1:
+            draw.line((x + w + 8, y + 41, x + w + gap - 8, y + 41), fill=GREEN, width=5)
+            draw.polygon([(x + w + gap - 8, y + 41), (x + w + gap - 24, y + 31), (x + w + gap - 24, y + 51)], fill=GREEN)
+        x += w + gap
+    rounded(draw, (92, 492, 752, 594), "#ffffff", LINE, 8)
+    draw_fit_text(draw, (126, 518, 718, 560), "核心原创：字幕状态机 + 上下文修正引擎 + 可审计版本轨迹", 26, 20, INK, bold=True, align="center", valign="middle")
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def subtitle_card(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    status: str,
+    zh: str,
+    en: str,
+    accent: str,
+    fill: str = "#ffffff",
+) -> None:
+    x1, y1, x2, y2 = box
+    rounded(draw, box, fill, "#ccd8e6", 8)
+    draw.rectangle((x1, y1, x1 + 8, y2), fill=accent)
+    draw_fit_text(draw, (x1 + 24, y1 + 12, x2 - 24, y1 + 40), status, 18, 14, accent, bold=True)
+    draw_fit_text(draw, (x1 + 24, y1 + 48, x2 - 24, y1 + 86), en, 18, 13, "#5d6a7b")
+    draw_fit_text(draw, (x1 + 24, y1 + 86, x2 - 24, y2 - 18), zh, 24, 17, INK, bold=True)
+
+
+def draw_stream(scene: Scene, index: int) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    subtitle_card(draw, (74, 244, 752, 360), "partial · v1", "大家早上好，今天我们将探索实时 AI 同声传译。", "Good morning everyone ...", "#778397")
+    subtitle_card(draw, (74, 384, 752, 500), "stable · v1", "这个模型使用张力机制来判断哪些词更重要。", "The model uses a tension mechanism ...", BLUE)
+    subtitle_card(draw, (74, 524, 752, 640), "final · v1", "术语表帮助系统保持技术术语一致。", "A small glossary keeps terms consistent.", GREEN)
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def draw_correction(scene: Scene, index: int, progress: float) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    subtitle_card(draw, (78, 238, 744, 370), "stable · v1", "这个模型使用张力机制来判断哪些词更重要。", "The model uses a tension mechanism ...", BLUE)
+    draw.line((410, 402, 410, 468), fill="#c49513", width=5)
+    draw.polygon([(410, 468), (394, 446), (426, 446)], fill="#c49513")
+    draw_fit_text(draw, (120, 410, 700, 454), "后文出现 attention mechanism 后触发回溯修正", 25, 18, "#8b5d08", bold=True, align="center")
+    if progress > 0.42:
+        subtitle_card(draw, (78, 484, 744, 628), "corrected · v2", "这个模型使用注意力机制来判断哪些词更重要。", "The model uses a tension mechanism ...", "#c49513", "#fff9df")
+    else:
+        rounded(draw, (78, 484, 744, 628), "#ffffff", "#d7e1ec", 8)
+        draw_fit_text(draw, (118, 528, 704, 580), "等待后续上下文...", 30, 22, MUTED, bold=True, align="center", valign="middle")
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def draw_synced(scene: Scene, index: int, progress: float) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    rounded(draw, (70, 234, 792, 622), "#111827", "#26364d", 8)
+    draw_fit_text(draw, (112, 270, 340, 302), "AI TECH TALK", 20, 16, "#6ee7b7", bold=True)
+    draw_fit_text(draw, (112, 318, 670, 366), "Real-time AI Interpretation", 38, 28, "#ffffff", bold=True)
+    draw_fit_text(draw, (112, 374, 702, 410), "Original English audio · synchronized Chinese interpretation", 20, 15, "#bfd2e8", bold=True)
+    for i, h in enumerate([28, 56, 40, 76, 50, 64, 34, 72]):
+        x = 126 + i * 28
+        draw.rounded_rectangle((x, 486 - h, x + 13, 486), radius=6, fill=GOLD)
+    corrected = progress > 0.50
+    rounded(draw, (112, 500, 750, 600), "#081320", "#40536d", 8)
+    status = "已修正 · v2" if corrected else "稳定 · v1"
+    zh = "这个模型使用注意力机制来判断哪些词更重要。" if corrected else "这个模型使用张力机制来判断哪些词更重要。"
+    draw_fit_text(draw, (136, 514, 736, 538), status, 17, 13, "#9ee7ca" if corrected else "#c8d8ef", bold=True)
+    draw_fit_text(draw, (136, 542, 736, 572), zh, 24, 18, "#ffffff", bold=True)
+    draw_fit_text(draw, (136, 574, 736, 594), "The model uses a tension mechanism ...", 15, 12, "#dce8f5", bold=True)
+    draw.rectangle((70, 640, 792, 660), fill="#dce8f5")
+    draw.rectangle((70, 640, 70 + int(722 * progress), 660), fill=GREEN)
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def draw_audit(scene: Scene, index: int) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    items = [
+        ("修正时间线", "触发原因、修正延迟、v1 -> v2"),
+        ("版本轨迹", "每条字幕保留状态与译文变化"),
+        ("导出总结", "Markdown / SRT / 会后总结"),
+    ]
+    y = 246
+    for title, body in items:
+        rounded(draw, (82, y, 742, y + 104), "#ffffff", LINE, 8)
+        draw_fit_text(draw, (116, y + 18, 330, y + 48), title, 26, 20, GREEN, bold=True)
+        draw_fit_text(draw, (116, y + 56, 704, y + 86), body, 23, 17, INK, bold=True)
+        y += 130
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def draw_quality(scene: Scene, index: int) -> Image.Image:
+    img, draw = base_slide(scene, index)
+    rounded(draw, (88, 234, 752, 598), NAVY, "#26364d", 8)
+    checks = [
+        "26 backend tests passed",
+        "Frontend production build passed",
+        "Single-service smoke passed",
+        "README + demo video link ready",
+        "Continuous PR history complete",
+    ]
+    y = 276
+    for item in checks:
+        draw.ellipse((130, y + 8, 154, y + 32), fill="#6ee7b7")
+        draw_fit_text(draw, (174, y, 690, y + 42), item, 25, 18, "#eef6ff", bold=True, valign="middle")
+        y += 58
+    draw_side_notes(draw, scene.bullets)
+    return img
+
+
+def render_scene(scene: Scene, index: int, progress: float) -> Image.Image:
+    if scene.kind == "cover":
+        return draw_cover(scene, index)
+    if scene.kind == "challenge":
+        return draw_challenge(scene, index)
+    if scene.kind == "architecture":
+        return draw_architecture(scene, index)
+    if scene.kind == "stream":
+        return draw_stream(scene, index)
+    if scene.kind == "correction":
+        return draw_correction(scene, index, progress)
+    if scene.kind == "synced":
+        return draw_synced(scene, index, progress)
+    if scene.kind == "audit":
+        return draw_audit(scene, index)
+    if scene.kind == "quality":
+        return draw_quality(scene, index)
+    raise ValueError(f"Unknown scene kind: {scene.kind}")
 
 
 def synthesize_scene_audio(scene: Scene, index: int) -> Path:
@@ -171,7 +461,7 @@ def wav_duration(path: Path) -> float:
 
 def combine_wavs(paths: list[Path], output: Path) -> None:
     params = None
-    silence_seconds = 0.25
+    silence_seconds = 0.35
     with wave.open(str(output), "wb") as out:
         for index, path in enumerate(paths):
             with wave.open(str(path), "rb") as src:
@@ -186,147 +476,12 @@ def combine_wavs(paths: list[Path], output: Path) -> None:
                     out.writeframes(b"\x00" * silence_frames * src.getnchannels() * src.getsampwidth())
 
 
-def wrap(draw: ImageDraw.ImageDraw, text: str, font_obj: ImageFont.FreeTypeFont, width: int) -> list[str]:
-    lines: list[str] = []
-    for paragraph in text.splitlines() or [text]:
-        current = ""
-        for char in paragraph:
-            candidate = current + char
-            if draw.textbbox((0, 0), candidate, font=font_obj)[2] <= width:
-                current = candidate
-            else:
-                if current:
-                    lines.append(current)
-                current = char
-        if current:
-            lines.append(current)
-    return lines
-
-
-def rounded(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str, outline: str | None = None, radius: int = 8) -> None:
-    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=2 if outline else 1)
-
-
-def text_block(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font_obj: ImageFont.FreeTypeFont, fill: str, max_width: int, line_gap: int = 8) -> int:
-    x, y = xy
-    for line in wrap(draw, text, font_obj, max_width):
-        draw.text((x, y), line, font=font_obj, fill=fill)
-        y += font_obj.size + line_gap
-    return y
-
-
-def base_scene(scene: Scene, index: int) -> tuple[Image.Image, ImageDraw.ImageDraw]:
-    img = Image.new("RGB", (WIDTH, HEIGHT), "#f4f7fb")
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, WIDTH, 92), fill="#122033")
-    draw.text((48, 28), "AI 同声传译助手", font=font(30, True), fill="#ffffff")
-    draw.text((1010, 32), f"Demo {index + 1}/{len(SCENES)}", font=font(20), fill="#c7d8ec")
-    draw.text((48, 118), scene.title, font=font(42, True), fill="#172234")
-    return img, draw
-
-
-def draw_bullets(draw: ImageDraw.ImageDraw, bullets: list[str], x: int, y: int, width: int) -> None:
-    body = font(25)
-    for item in bullets:
-        rounded(draw, (x, y, x + width, y + 72), "#ffffff", "#d8e2ee")
-        draw.ellipse((x + 20, y + 23, x + 40, y + 43), fill="#1d8f6f")
-        text_block(draw, (x + 58, y + 18), item, body, "#243247", width - 82, 4)
-        y += 88
-
-
-def draw_architecture(draw: ImageDraw.ImageDraw) -> None:
-    labels = ["音频流", "ASR", "翻译", "状态机", "修正引擎", "字幕 UI"]
-    x = 92
-    y = 310
-    w = 155
-    for label in labels:
-        rounded(draw, (x, y, x + w, y + 84), "#ffffff", "#cad6e5")
-        draw.text((x + 28, y + 24), label, font=font(25, True), fill="#172234")
-        if label != labels[-1]:
-            draw.line((x + w + 12, y + 42, x + w + 48, y + 42), fill="#2e7d61", width=5)
-            draw.polygon([(x + w + 48, y + 42), (x + w + 32, y + 32), (x + w + 32, y + 52)], fill="#2e7d61")
-        x += w + 60
-
-
-def draw_subtitle_card(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], status: str, zh: str, en: str, accent: str) -> None:
-    x1, y1, x2, y2 = box
-    rounded(draw, box, "#ffffff", "#d7e1ec")
-    draw.rectangle((x1, y1, x1 + 8, y2), fill=accent)
-    draw.text((x1 + 24, y1 + 16), status, font=font(20, True), fill=accent)
-    text_block(draw, (x1 + 24, y1 + 48), en, font(20), "#526073", x2 - x1 - 48, 3)
-    text_block(draw, (x1 + 24, y1 + 90), zh, font(26, True), "#162033", x2 - x1 - 48, 4)
-
-
-def draw_media_stage(draw: ImageDraw.ImageDraw, corrected: bool) -> None:
-    rounded(draw, (82, 206, 828, 626), "#111827", "#26364d")
-    draw.text((126, 254), "AI TECH TALK", font=font(20, True), fill="#6ee7b7")
-    draw.text((126, 294), "Real-time AI Interpretation", font=font(40, True), fill="#ffffff")
-    draw.text((126, 350), "Original English audio · synchronized Chinese interpretation", font=font(21), fill="#bfd2e8")
-    bars = [36, 62, 44, 80, 50, 66, 38, 72]
-    for i, h in enumerate(bars):
-        x = 135 + i * 24
-        draw.rounded_rectangle((x, 448 - h, x + 12, 448), radius=6, fill="#f4d35e")
-    rounded(draw, (110, 488, 800, 604), "#081320", "#3c4d66")
-    status = "已修正 · v2" if corrected else "稳定 · v1"
-    zh = "这个模型使用注意力机制来判断哪些词更重要。" if corrected else "这个模型使用张力机制来判断哪些词更重要。"
-    en = "The model uses a tension mechanism to decide which words matter."
-    draw.text((132, 506), status, font=font(18, True), fill="#9ee7ca" if corrected else "#c8d8ef")
-    draw.text((132, 536), zh, font=font(27, True), fill="#ffffff")
-    draw.text((132, 572), en, font=font(18, True), fill="#dce8f5")
-    if corrected:
-        draw.text((110, 628), "修正前：这个模型使用张力机制来判断哪些词更重要。", font=font(18), fill="#8b5d08")
-
-
-def render_scene(scene: Scene, index: int, progress: float) -> Image.Image:
-    img, draw = base_scene(scene, index)
-    draw_bullets(draw, scene.bullets, 780, 170, 420)
-
-    if scene.kind == "opening":
-        rounded(draw, (78, 190, 710, 600), "#ffffff", "#d6e2ef")
-        draw.text((118, 234), "题目二", font=font(30, True), fill="#1d8f6f")
-        text_block(draw, (118, 292), "通过 AI 能力，将单向音频流实时、流畅地翻译成中文，以字幕或语音形式呈现。系统需具备修正能力，能够自动纠正之前识别或翻译的错误。", font(31, True), "#172234", 520, 12)
-    elif scene.kind == "architecture":
-        draw_architecture(draw)
-    elif scene.kind == "stream":
-        draw_subtitle_card(draw, (78, 184, 720, 314), "临时 · v1", "大家早上好，今天我们将探索实时 AI 同声传译。", "Good morning everyone, today we will explore real-time AI interpretation.", "#778397")
-        draw_subtitle_card(draw, (78, 342, 720, 472), "稳定 · v1", "这个模型使用张力机制来判断哪些词更重要。", "The model uses a tension mechanism to decide which words matter.", "#2f6fd6")
-        draw_subtitle_card(draw, (78, 500, 720, 630), "最终 · v1", "一个小型术语表可以帮助系统保持技术术语翻译一致。", "A small glossary helps the system keep technical terms consistent.", "#2e7d61")
-    elif scene.kind == "correction":
-        corrected = progress > 0.46
-        draw_subtitle_card(draw, (82, 190, 700, 350), "稳定 · v1", "这个模型使用张力机制来判断哪些词更重要。", "The model uses a tension mechanism to decide which words matter.", "#2f6fd6")
-        arrow = "后文出现 attention mechanism 后触发回溯修正"
-        draw.text((116, 382), arrow, font=font(24, True), fill="#8b5d08")
-        if corrected:
-            draw_subtitle_card(draw, (82, 426, 700, 612), "已修正 · v2", "这个模型使用注意力机制来判断哪些词更重要。", "The model uses a tension mechanism to decide which words matter.", "#c49513")
-    elif scene.kind == "synced":
-        draw_media_stage(draw, corrected=progress > 0.5)
-        rounded(draw, (82, 640, 828, 668), "#dfe9f5", None)
-        marker_x = 82 + int(746 * min(max(progress, 0), 1))
-        draw.rectangle((82, 640, marker_x, 668), fill="#1d8f6f")
-        draw.text((94, 646), "音频播放时间驱动字幕显示", font=font(15, True), fill="#172234")
-    elif scene.kind == "audit":
-        draw_subtitle_card(draw, (78, 190, 700, 330), "修正时间线", "触发：后续上下文出现 attention mechanism；延迟：1480ms；版本：v1 -> v2。", "Correction trace keeps the reason, latency, and version history.", "#c49513")
-        draw_subtitle_card(draw, (78, 370, 700, 522), "会后总结", "系统自动输出关键点、术语和修正说明，方便课后复盘。", "Summary, glossary, correction notes, and transcript export.", "#2e7d61")
-    elif scene.kind == "quality":
-        rounded(draw, (88, 198, 700, 580), "#162033", "#26364d")
-        lines = [
-            "✓ 26 backend tests passed",
-            "✓ Frontend production build passed",
-            "✓ Single-service smoke passed",
-            "✓ README documents original boundaries",
-            "✓ PR history shows continuous delivery",
-        ]
-        for i, line in enumerate(lines):
-            draw.text((126, 242 + i * 58), line, font=font(27, True), fill="#e7f3ff")
-    return img
-
-
 def render_video(scene_durations: list[float]) -> None:
     writer = imageio.get_writer(
         str(VIDEO_ONLY),
         fps=FPS,
         codec="libx264",
-        quality=8,
+        quality=9,
         macro_block_size=8,
     )
     try:
@@ -365,7 +520,7 @@ def mux_audio() -> None:
 def main() -> None:
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
     audio_paths = [synthesize_scene_audio(scene, index) for index, scene in enumerate(SCENES)]
-    durations = [wav_duration(path) + 0.25 for path in audio_paths]
+    durations = [wav_duration(path) + 0.35 for path in audio_paths]
     combine_wavs(audio_paths, NARRATION)
     render_video(durations)
     mux_audio()
