@@ -310,6 +310,7 @@ set TRANSLATION_BASE_URL=https://api.openai.com/v1
 - 后端框架：FastAPI、Pydantic、uvicorn、python-multipart、httpx
 - 前端框架：React、Vite、TypeScript
 - 测试与工具：pytest、GitHub Actions
+- Demo 视频生成工具：edge-tts、Pillow、imageio、imageio-ffmpeg、numpy
 
 第三方库仅作为基础框架或底层模型能力接入，作品核心创新点是实时字幕状态机、上下文修正引擎、术语表修正策略、工程化 Provider 架构和完整交互闭环。
 
