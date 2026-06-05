@@ -211,10 +211,21 @@ button.secondary:hover {
   font-weight: 900;
 }
 
-.video-caption strong {
+.video-caption .caption-zh {
   display: block;
   margin-top: 6px;
   font-size: 24px;
+  line-height: 1.35;
+}
+
+.video-caption .caption-en {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 34%);
+  color: #dce8f5;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.35;
 }
 
@@ -324,6 +335,11 @@ button.secondary:hover {
   border: 1px dashed #cbd5e3;
   border-radius: 8px;
   background: #f8fafc;
+}
+
+.empty-state.compact {
+  min-height: 180px;
+  padding: 24px;
 }
 
 .subtitle-card {
@@ -930,8 +946,12 @@ textarea {
     padding: 10px 12px;
   }
 
-  .video-caption strong {
+  .video-caption .caption-zh {
     font-size: 17px;
+  }
+
+  .video-caption .caption-en {
+    font-size: 13px;
   }
 
   .caption-bar {

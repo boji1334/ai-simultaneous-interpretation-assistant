@@ -268,7 +268,13 @@ function App() {
 
   const exportText = useMemo(() => buildExportText(segments), [segments]);
   const currentSegment = segments.at(-1);
+  const isVideoCaptionMode =
+    videoSyncSegments.length > 0 && segments.some((segment) => segment.id.startsWith("video-"));
   const activeVideoSegment = useMemo(() => {
+    if (!isVideoCaptionMode) {
+      return null;
+    }
+
     const timedSegment = [...segments]
       .reverse()
       .find((segment) => {
@@ -277,7 +283,7 @@ function App() {
         return videoTime >= start && videoTime <= end;
       });
     return timedSegment ?? currentSegment;
-  }, [currentSegment, segments, videoTime]);
+  }, [currentSegment, isVideoCaptionMode, segments, videoTime]);
   const correctedSegment = segments.find((segment) => segment.status === "corrected");
   const revisionGroups = useMemo(() => {
     return revisions.reduce<Record<string, SubtitleRevision[]>>((groups, revision) => {
@@ -946,10 +952,11 @@ function App() {
             ) : (
               <div className="video-placeholder">加载公开网课视频后，可在这里观看同步中文字幕。</div>
             )}
-            {activeVideoSegment && (
+            {isVideoCaptionMode && activeVideoSegment && (
               <div className={`video-caption ${activeVideoSegment.status}`}>
                 <span>{statusLabel[activeVideoSegment.status]} · v{activeVideoSegment.version}</span>
-                <strong>{activeVideoSegment.translatedText}</strong>
+                <strong className="caption-zh">{activeVideoSegment.translatedText}</strong>
+                <p className="caption-en">{activeVideoSegment.sourceText}</p>
                 {activeVideoSegment.previousTranslation && (
                   <em>修正前：{activeVideoSegment.previousTranslation}</em>
                 )}
@@ -1002,7 +1009,9 @@ function App() {
           </div>
 
           <div className="subtitle-list" aria-live="polite">
-            {segments.length === 0 ? (
+            {isVideoCaptionMode ? (
+              <div className="empty-state compact">视频字幕已叠加在播放器上，修正记录保留在右侧。</div>
+            ) : segments.length === 0 ? (
               <div className="empty-state">点击“启动实时演示”，观察字幕流和修正瞬间。</div>
             ) : (
               segments.map((segment) => (
@@ -1242,7 +1251,7 @@ function App() {
         <textarea readOnly value={exportText} placeholder="最终双语字幕会显示在这里。" />
       </section>
 
-      {currentSegment && (
+      {currentSegment && !isVideoCaptionMode && (
         <div className="caption-bar" aria-live="polite">
           <span className={`status ${currentSegment.status}`}>{statusLabel[currentSegment.status]}</span>
           <strong>{currentSegment.translatedText}</strong>
