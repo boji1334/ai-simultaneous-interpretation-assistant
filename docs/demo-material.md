@@ -18,6 +18,28 @@ assets/demo/demo-script.en.txt
 4. Mention in the README or PR description that the demo audio is self-written/generated for this competition.
 5. Avoid using TED, YouTube, course, or conference audio unless you have explicit permission.
 
+## External Video Policy
+
+The competition topic explicitly mentions speeches, technical talks, international conferences, and online courses. To make the demo feel closer to that scenario, the app can also show an external video player synchronized with the subtitle stream.
+
+Use only material that is legally safe for a public demo:
+
+- Prefer self-recorded video or generated video from the original script.
+- Prefer public-domain or Creative Commons videos with visible license pages.
+- Keep attribution in the README, PR description, or demo video narration.
+- Do not use TED, YouTube, paid course, or conference recordings unless permission is explicit.
+
+Recommended public sample:
+
+```text
+Title: Welcome (6.002x-1).webm
+Source: Wikimedia Commons
+License: Creative Commons Attribution-Share Alike 4.0
+Scenario: MITx online course welcome video
+```
+
+This sample is appropriate for demonstrating the "watching an English online course with Chinese interpretation subtitles" workflow. The app still keeps the default self-written correction demo because it is deterministic and designed to highlight the required automatic correction capability.
+
 ## Offline WAV Generation
 
 On Windows, generate a local WAV file with the system speech synthesizer:
