@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 import subprocess
 import wave
@@ -23,6 +24,11 @@ SCENE_AUDIO_DIR = ASSET_DIR / ".demo-video-audio"
 WIDTH = 1280
 HEIGHT = 720
 FPS = 12
+TTS_PROVIDER = os.getenv("DEMO_TTS_PROVIDER", "auto").strip().lower()
+TTS_VOICE = os.getenv("DEMO_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
+TTS_RATE = os.getenv("DEMO_TTS_RATE", "+7%")
+TTS_PITCH = os.getenv("DEMO_TTS_PITCH", "+4Hz")
+TTS_VOLUME = os.getenv("DEMO_TTS_VOLUME", "+0%")
 
 FONT_REGULAR = Path("C:/Windows/Fonts/NotoSansSC-VF.ttf")
 FONT_BOLD = Path("C:/Windows/Fonts/simhei.ttf")
@@ -52,8 +58,10 @@ SCENES = [
         claim="把单向英文音频流实时翻译成中文，并能回头修正前文错误。",
         kind="cover",
         narration=(
-            "大家好，这是我们的 AI 同声传译助手。它面向英文演讲、技术分享、国际会议和网课场景。"
-            "系统将单向英文音频流实时翻译成中文字幕，并在后文信息到达后，自动纠正之前的识别或翻译错误。"
+            "大家好，先用一分钟看清楚我们的作品。"
+            "这是 AI 同声传译助手，面向英文演讲、技术分享、国际会议和网课。"
+            "它不是等整段音频结束再翻译，而是边听、边出中文字幕。"
+            "更关键的是，当后文信息来了，它会主动回头修正前面翻错的内容。"
         ),
         bullets=["实时中文字幕", "上下文回溯修正", "可复现演示材料"],
     ),
@@ -62,8 +70,9 @@ SCENES = [
         claim="同传不是简单串联 ASR 和翻译，真正难点是低延迟与后文纠错同时成立。",
         kind="challenge",
         narration=(
-            "这个题目的关键不是把 ASR 和翻译接口简单串起来，而是要在低延迟和准确性之间取得平衡。"
-            "我们用字幕状态机先快速给出可读结果，再允许后续上下文触发局部修正。"
+            "这个题目的难点，其实不在于把 ASR 和翻译接口串起来。"
+            "真正难的是两个目标同时成立：字幕要快，不能让用户等；但翻译又要能根据后文纠错。"
+            "所以我们采用先跟上、再修正的策略。先给用户可读字幕，再用上下文做局部回溯。"
         ),
         bullets=["低延迟：先显示 partial / stable", "高准确：后文触发 corrected", "低打扰：只修正局部字幕"],
     ),
@@ -72,9 +81,10 @@ SCENES = [
         claim="Provider 可替换，核心原创逻辑集中在字幕状态机和修正引擎。",
         kind="architecture",
         narration=(
-            "系统采用 React 前端和 FastAPI 后端。音频事件经由 WebSocket 流式进入，"
-            "再经过 ASR Provider、翻译 Provider、字幕状态机和修正引擎。"
-            "真实 ASR 可以替换成本地 faster-whisper，翻译也可以替换成云端接口。"
+            "架构上，前端用 React，后端用 FastAPI 和 WebSocket。"
+            "音频事件流进来以后，会依次经过 ASR、翻译、字幕状态机和修正引擎。"
+            "ASR 和翻译都做成 Provider，可替换、可降级。"
+            "我们的原创重点，放在字幕状态流转、上下文修正和版本轨迹上。"
         ),
         bullets=["React / Vite / TypeScript", "FastAPI / WebSocket", "Mock、faster-whisper、云翻译可切换"],
     ),
@@ -83,8 +93,10 @@ SCENES = [
         claim="同一条字幕从临时、稳定、已修正到最终状态，完整回应“实时”和“修正”。",
         kind="stream",
         narration=(
-            "启动实时演示后，字幕按事件逐条出现，不是一次性加载。"
-            "每条字幕有明确状态，可以从临时变稳定，也可以在上下文到达后被修正，最后进入最终状态并用于导出。"
+            "进入实时字幕流，可以看到字幕是一条一条出现的。"
+            "每条字幕都有状态：先是 partial，随后 stable。"
+            "如果后文证明前面理解错了，它会变成 corrected。"
+            "最后进入 final，并用于 SRT 或 Markdown 导出。"
         ),
         bullets=["首字幕延迟约 820ms", "状态：partial -> stable -> corrected -> final", "最终字幕支持 Markdown / SRT 导出"],
     ),
@@ -93,9 +105,10 @@ SCENES = [
         claim="后文出现 attention mechanism 后，系统把“张力机制”回溯修正为“注意力机制”。",
         kind="correction",
         narration=(
-            "重点看修正能力。系统一开始把 tension mechanism 翻成张力机制。"
-            "后文出现 attention mechanism 后，术语表和滑动窗口确认语义，回头把前文修正为注意力机制。"
-            "修正过程保留原因、延迟和版本变化。"
+            "这是 Demo 的黄金时刻。"
+            "系统一开始把 tension mechanism 翻成了张力机制，听上去合理，但在这个技术语境里是错的。"
+            "当后面出现 attention mechanism，术语表和滑动窗口会重新判断语义。"
+            "于是系统回头把前面的译文修正为注意力机制，并记录触发原因、延迟和版本变化。"
         ),
         bullets=["修正延迟：1480ms", "版本变化：v1 -> v2", "修正记录可审计"],
     ),
@@ -104,9 +117,10 @@ SCENES = [
         claim="主 demo 使用自写英文音频，字幕由播放时间驱动，避免公开视频时间轴错位。",
         kind="synced",
         narration=(
-            "为了保证比赛演示稳定，主 demo 使用自写英文脚本生成的 TTS 音频。"
-            "播放器按真实音频时间同步显示字幕：中文同传在上，英文原文在下。"
-            "十四秒左右先出现错误译文，二十一秒左右后文到达后闪现已修正字幕。"
+            "为了让评委稳定复现，我们主 Demo 使用自写英文脚本生成音频。"
+            "播放器不是预加载整段翻译，而是根据真实播放时间推进字幕。"
+            "中文同传显示在上方，英文原文显示在下方。"
+            "先让错误译文出现，再让后文触发修正，这样题目的核心要求会非常直观。"
         ),
         bullets=["自写音频：无版权风险", "字幕跟随 currentTime", "中文在上，英文在下"],
     ),
@@ -115,8 +129,9 @@ SCENES = [
         claim="修正时间线、版本轨迹、术语表、指标、导出和总结构成完整产品闭环。",
         kind="audit",
         narration=(
-            "除了播放器本身，右侧面板还会展示修正时间线、版本轨迹、术语表、量化指标和会后总结。"
-            "这让自动修正不是静默覆盖，而是可解释、可审计、可复盘的产品能力。"
+            "我们没有把修正做成一次静默覆盖。"
+            "右侧面板会展示修正时间线、版本轨迹、术语命中、量化指标和会后总结。"
+            "也就是说，评委不仅能看到字幕变对了，还能看到它为什么变、什么时候变、从哪个版本变到哪个版本。"
         ),
         bullets=["修正时间线：原因、延迟、版本", "量化指标：首字幕延迟、术语命中率", "会后复盘：总结、关键词、导出"],
     ),
@@ -125,9 +140,10 @@ SCENES = [
         claim="项目已具备可运行主分支、测试、CI、冒烟验收、README 和 demo 视频。",
         kind="quality",
         narration=(
-            "工程侧已经提供后端测试、前端构建、单服务冒烟和提交前审计。"
-            "仓库通过多个小 PR 持续交付，主分支保持可运行。"
-            "评委可以直接根据 README 复现同步同传、自动修正、导出和总结能力。"
+            "最后看工程质量。"
+            "项目已经提供后端测试、前端构建、单服务冒烟和提交前审计。"
+            "仓库通过多个小 PR 持续交付，主分支始终保持可运行。"
+            "评委可以直接根据 README，复现同步同传、自动修正、导出和总结能力。"
         ),
         bullets=["26 个后端测试通过", "单服务地址：http://127.0.0.1:8000", "README、Release 视频、PR 记录齐备"],
     ),
@@ -430,19 +446,62 @@ def render_scene(scene: Scene, index: int, progress: float) -> Image.Image:
     raise ValueError(f"Unknown scene kind: {scene.kind}")
 
 
-def synthesize_scene_audio(scene: Scene, index: int) -> Path:
+def convert_audio_to_wav(input_path: Path, wav_path: Path) -> None:
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    subprocess.run(
+        [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(input_path),
+            "-ac",
+            "1",
+            "-ar",
+            "22050",
+            "-acodec",
+            "pcm_s16le",
+            str(wav_path),
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def synthesize_edge_scene_audio(scene: Scene, index: int, wav_path: Path) -> Path:
+    import asyncio
+
+    import edge_tts
+
+    mp3_path = SCENE_AUDIO_DIR / f"scene-{index:02d}.mp3"
+
+    async def save_audio() -> None:
+        communicate = edge_tts.Communicate(
+            text=scene.narration,
+            voice=TTS_VOICE,
+            rate=TTS_RATE,
+            pitch=TTS_PITCH,
+            volume=TTS_VOLUME,
+        )
+        await communicate.save(str(mp3_path))
+
+    asyncio.run(save_audio())
+    convert_audio_to_wav(mp3_path, wav_path)
+    return wav_path
+
+
+def synthesize_sapi_scene_audio(scene: Scene, text_path: Path, wav_path: Path) -> Path:
+    safe_text_path = str(text_path).replace("'", "''")
+    safe_wav_path = str(wav_path).replace("'", "''")
     SCENE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-    text_path = SCENE_AUDIO_DIR / f"scene-{index:02d}.txt"
-    wav_path = SCENE_AUDIO_DIR / f"scene-{index:02d}.wav"
-    text_path.write_text(scene.narration, encoding="utf-8")
     ps = f"""
 Add-Type -AssemblyName System.Speech
-$text = Get-Content -LiteralPath '{text_path}' -Raw -Encoding UTF8
+$text = Get-Content -LiteralPath '{safe_text_path}' -Raw -Encoding UTF8
 $speaker = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $speaker.SelectVoice('Microsoft Huihui Desktop')
-$speaker.Rate = 0
+$speaker.Rate = 1
 $speaker.Volume = 100
-$speaker.SetOutputToWaveFile('{wav_path}')
+$speaker.SetOutputToWaveFile('{safe_wav_path}')
 $speaker.Speak($text)
 $speaker.Dispose()
 """
@@ -452,6 +511,25 @@ $speaker.Dispose()
         cwd=ROOT,
     )
     return wav_path
+
+
+def synthesize_scene_audio(scene: Scene, index: int) -> Path:
+    SCENE_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    text_path = SCENE_AUDIO_DIR / f"scene-{index:02d}.txt"
+    wav_path = SCENE_AUDIO_DIR / f"scene-{index:02d}.wav"
+    text_path.write_text(scene.narration, encoding="utf-8")
+
+    if TTS_PROVIDER in {"auto", "edge", "neural"}:
+        try:
+            print(f"Scene {index + 1}: Edge Neural TTS ({TTS_VOICE}, rate {TTS_RATE}, pitch {TTS_PITCH})")
+            return synthesize_edge_scene_audio(scene, index, wav_path)
+        except Exception as exc:
+            if TTS_PROVIDER in {"edge", "neural"}:
+                raise
+            print(f"Scene {index + 1}: Edge Neural TTS unavailable ({exc}); falling back to Windows SAPI.")
+
+    print(f"Scene {index + 1}: Windows SAPI fallback (Microsoft Huihui Desktop)")
+    return synthesize_sapi_scene_audio(scene, text_path, wav_path)
 
 
 def wav_duration(path: Path) -> float:

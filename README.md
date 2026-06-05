@@ -192,12 +192,21 @@ http://127.0.0.1:8000
 - Release 页面：[AI 同声传译助手 Demo Video](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/tag/demo-video-v1)
 - MP4 直链：[final-demo.mp4](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4)
 
-视频包含中文语音讲解，覆盖题目贴合度、实时字幕流、`张力机制 -> 注意力机制` 回溯修正、同步素材同传、修正时间线、量化指标、导出、总结和工程质量说明。
+视频包含中文语音讲解，覆盖题目贴合度、实时字幕流、`张力机制 -> 注意力机制` 回溯修正、同步素材同传、修正时间线、量化指标、导出、总结和工程质量说明。公开视频默认使用 `zh-CN-XiaoxiaoNeural` 生成更接近真人讲解的中文旁白；本地重新生成时若无法访问神经网络 TTS，会自动降级为 Windows 离线语音以保证可复现。
 
 如需重新生成本地 demo 视频：
 
 ```powershell
-python -m pip install imageio-ffmpeg
+python -m pip install imageio-ffmpeg edge-tts
+python scripts\generate-demo-video.py
+```
+
+可通过环境变量调整旁白风格：
+
+```powershell
+$env:DEMO_TTS_VOICE = "zh-CN-XiaoxiaoNeural"
+$env:DEMO_TTS_RATE = "+7%"
+$env:DEMO_TTS_PITCH = "+4Hz"
 python scripts\generate-demo-video.py
 ```
 
