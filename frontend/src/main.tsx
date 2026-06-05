@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { API_BASE, websocketUrl } from "./config";
 import "./styles.css";
@@ -130,8 +130,11 @@ type DemoSnapshot = {
   summary: SummaryResult;
 };
 
+type VideoDemoSnapshot = DemoSnapshot & {
+  source: VideoDemoSource;
+};
+
 const WS_URL = `${websocketUrl("/ws/demo")}?speed=1.35`;
-const VIDEO_DEMO_WS_URL = `${websocketUrl("/ws/video-demo")}?speed=1.25`;
 const AUDIO_STREAM_WS_URL = websocketUrl("/ws/audio-stream");
 
 const statusLabel: Record<SubtitleStatus, string> = {
@@ -252,6 +255,12 @@ function App() {
   const [videoSource, setVideoSource] = useState<VideoDemoSource | null>(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [videoTime, setVideoTime] = useState(0);
+  const [isVideoSyncActive, setIsVideoSyncActive] = useState(false);
+  const [videoSyncSegments, setVideoSyncSegments] = useState<SubtitleSegment[]>([]);
+  const [videoSyncCorrections, setVideoSyncCorrections] = useState<CorrectionTrace[]>([]);
+  const [videoSyncRevisions, setVideoSyncRevisions] = useState<SubtitleRevision[]>([]);
+  const [videoSyncMetrics, setVideoSyncMetrics] = useState<MetricSnapshot | null>(null);
+  const [videoSyncSummary, setVideoSyncSummary] = useState<SummaryResult | null>(null);
   const demoSocketRef = useRef<WebSocket | null>(null);
   const audioSocketRef = useRef<WebSocket | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -277,9 +286,103 @@ function App() {
     }, {});
   }, [revisions]);
 
+  const getCorrectionRevealTime = (trace: CorrectionTrace) => {
+    const segment = videoSyncSegments.find((item) => item.id === trace.segmentId);
+    const anchorTime = segment?.endTime ?? segment?.startTime ?? 0;
+    return anchorTime + trace.latencyMs / 1000 + 8;
+  };
+
+  const resetVideoSync = () => {
+    setIsVideoSyncActive(false);
+    setVideoSyncSegments([]);
+    setVideoSyncCorrections([]);
+    setVideoSyncRevisions([]);
+    setVideoSyncMetrics(null);
+    setVideoSyncSummary(null);
+  };
+
+  useEffect(() => {
+    if (!isVideoSyncActive || videoSyncSegments.length === 0) {
+      return;
+    }
+
+    const leadSeconds = 0.35;
+    const visibleSegments = videoSyncSegments
+      .filter((segment) => segment.startTime <= videoTime + leadSeconds)
+      .map((segment) => {
+        const correction = videoSyncCorrections.find((trace) => trace.segmentId === segment.id);
+        if (!correction || videoTime >= getCorrectionRevealTime(correction)) {
+          return segment;
+        }
+
+        const previousRevision = videoSyncRevisions.find(
+          (revision) => revision.segmentId === segment.id && revision.version === correction.fromVersion
+        );
+
+        return {
+          ...segment,
+          translatedText: previousRevision?.translatedText ?? correction.previousTranslation,
+          status: previousRevision?.status ?? "stable",
+          version: correction.fromVersion,
+          confidence: previousRevision?.confidence ?? segment.confidence,
+          changedTerms: previousRevision?.changedTerms ?? segment.changedTerms,
+          previousTranslation: undefined
+        };
+      });
+
+    const visibleCorrections = videoSyncCorrections.filter((trace) => videoTime >= getCorrectionRevealTime(trace));
+    const visibleRevisions = videoSyncRevisions.filter((revision) => {
+      const segment = videoSyncSegments.find((item) => item.id === revision.segmentId);
+      if (!segment || segment.startTime > videoTime + leadSeconds) {
+        return false;
+      }
+
+      const correction = videoSyncCorrections.find((trace) => trace.segmentId === revision.segmentId);
+      if (correction && revision.version === correction.toVersion) {
+        return videoTime >= getCorrectionRevealTime(correction);
+      }
+
+      return true;
+    });
+
+    const finalEndTime = videoSyncSegments.at(-1)?.endTime ?? 0;
+    const isComplete = videoTime >= finalEndTime - 0.25;
+    const finalCount = visibleSegments.filter(
+      (segment) => segment.status === "final" || segment.status === "corrected"
+    ).length;
+    const subtitleCount = Math.max(visibleSegments.length, 1);
+
+    setSegments(visibleSegments);
+    setCorrectionTraces(visibleCorrections);
+    setRevisions(visibleRevisions);
+    setMetrics({
+      firstSubtitleLatencyMs: videoSyncMetrics?.firstSubtitleLatencyMs ?? 760,
+      correctionLatencyMs:
+        visibleCorrections.length > 0 ? videoSyncMetrics?.correctionLatencyMs ?? visibleCorrections[0].latencyMs : null,
+      glossaryHitRate: isComplete ? videoSyncMetrics?.glossaryHitRate ?? 1 : Math.min(1, visibleSegments.length / 17),
+      finalStabilityRate: isComplete ? videoSyncMetrics?.finalStabilityRate ?? 0.94 : finalCount / subtitleCount,
+      correctionCount: visibleCorrections.length,
+      finalCount,
+      subtitleCount: visibleSegments.length
+    });
+
+    if (isComplete) {
+      setConnectionState("视频同传完成");
+      setLastMessage("视频播放已到末尾，中文字幕覆盖完整视频");
+      if (videoSyncSummary) {
+        setSummary(videoSyncSummary);
+      }
+      setIsVideoSyncActive(false);
+    } else {
+      setConnectionState("视频同传中");
+      setLastMessage(`视频 ${videoTime.toFixed(1)}s，同步显示当前中文同传字幕`);
+    }
+  }, [isVideoSyncActive, videoSyncCorrections, videoSyncMetrics, videoSyncRevisions, videoSyncSegments, videoSyncSummary, videoTime]);
+
   const startDemo = () => {
     demoSocketRef.current?.close();
     audioSocketRef.current?.close();
+    resetVideoSync();
     setSegments([]);
     setGlossary([]);
     setCorrectionTraces([]);
@@ -480,6 +583,7 @@ function App() {
 
   const loadFinalTranscript = async () => {
     demoSocketRef.current?.close();
+    resetVideoSync();
     try {
       const data = await fetchJson<DemoSnapshot>(`${API_BASE}/api/demo/snapshot`);
       setSegments(data.segments);
@@ -538,8 +642,18 @@ function App() {
     }
 
     setVideoUrl(source.mediaUrl);
+    let snapshot: VideoDemoSnapshot;
+    try {
+      snapshot = await fetchJson<VideoDemoSnapshot>(`${API_BASE}/api/video-demo/snapshot`);
+    } catch {
+      setConnectionState("视频同传失败");
+      setLastMessage("无法加载视频字幕快照，请检查后端服务");
+      return;
+    }
+
+    setVideoSource(snapshot.source);
     setSegments([]);
-    setGlossary([]);
+    setGlossary(snapshot.glossary);
     setCorrectionTraces([]);
     setRevisions([]);
     setSummary(null);
@@ -552,10 +666,16 @@ function App() {
       finalCount: 0,
       subtitleCount: 0
     });
+    setVideoSyncSegments(snapshot.segments);
+    setVideoSyncCorrections(snapshot.corrections);
+    setVideoSyncRevisions(snapshot.revisions);
+    setVideoSyncMetrics(snapshot.metrics);
+    setVideoSyncSummary(snapshot.summary);
+    setIsVideoSyncActive(true);
     spokenSegmentIds.current.clear();
     setVideoTime(0);
-    setConnectionState("视频同传连接中");
-    setLastMessage("正在连接外部视频同传字幕流");
+    setConnectionState("视频待播放");
+    setLastMessage("视频字幕已就绪，播放时会按时间同步显示中文翻译");
 
     window.setTimeout(() => {
       if (!videoRef.current) {
@@ -564,59 +684,9 @@ function App() {
       videoRef.current.load();
       videoRef.current.currentTime = 0;
       void videoRef.current.play().catch(() => {
-        setLastMessage("浏览器阻止自动播放，请手动点击视频播放，同时字幕流会继续运行");
+        setLastMessage("浏览器阻止自动播放，请手动点击视频播放，字幕会跟随播放时间同步出现");
       });
     }, 0);
-
-    const socket = new WebSocket(VIDEO_DEMO_WS_URL);
-    demoSocketRef.current = socket;
-
-    socket.onopen = () => {
-      if (demoSocketRef.current !== socket) {
-        return;
-      }
-      setConnectionState("视频同传中");
-      setLastMessage("外部视频与中文字幕流已同步启动");
-    };
-
-    socket.onmessage = (event) => {
-      if (demoSocketRef.current !== socket) {
-        return;
-      }
-
-      let payload: DemoEvent;
-      try {
-        payload = JSON.parse(event.data) as DemoEvent;
-      } catch {
-        setConnectionState("解析失败");
-        setLastMessage("收到无法解析的视频字幕事件");
-        socket.close();
-        return;
-      }
-
-      handleStreamEvent(payload);
-      if (payload.type === "done") {
-        setConnectionState("视频同传完成");
-        setLastMessage("视频同传演示完成，可查看修正时间线和版本轨迹");
-        demoSocketRef.current = null;
-        socket.close();
-      }
-    };
-
-    socket.onerror = () => {
-      if (demoSocketRef.current !== socket) {
-        return;
-      }
-      setConnectionState("视频同传失败");
-      setLastMessage("无法连接视频同传流，请确认 FastAPI 服务已启动");
-      demoSocketRef.current = null;
-    };
-
-    socket.onclose = () => {
-      if (demoSocketRef.current === socket) {
-        demoSocketRef.current = null;
-      }
-    };
   };
 
   const uploadAudio = async (file: File | null) => {
@@ -696,6 +766,7 @@ function App() {
 
     audioSocketRef.current?.close();
     demoSocketRef.current?.close();
+    resetVideoSync();
     setSegments([]);
     setGlossary([]);
     setCorrectionTraces([]);
