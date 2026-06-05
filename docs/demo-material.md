@@ -40,6 +40,20 @@ Scenario: MITx online course welcome video
 
 This sample is appropriate for demonstrating the "watching an English online course with Chinese interpretation subtitles" workflow. The app still keeps the default self-written correction demo because it is deterministic and designed to highlight the required automatic correction capability.
 
+To download the public sample for local recording:
+
+```powershell
+.\scripts\download-demo-video.ps1
+```
+
+Default output:
+
+```text
+assets/demo/external-course-demo.webm
+```
+
+The downloaded video is ignored by Git. Keep the script, source page, license, and attribution in the repository as the reproducible trail.
+
 ## Offline WAV Generation
 
 On Windows, generate a local WAV file with the system speech synthesizer:
