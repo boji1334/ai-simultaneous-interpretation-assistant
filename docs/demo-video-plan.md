@@ -31,7 +31,7 @@ http://127.0.0.1:8000
 3. Click `启动实时演示`: show subtitles streaming in order.
 4. Pause on the correction: show `张力机制 -> 注意力机制`.
 5. Show `修正时间线`: explain trigger, reason, `1480ms`, and `v1 -> v2`.
-6. Click `启动视频同传`: show the external English online-course video and Chinese subtitle overlay.
+6. Click `启动视频同传`: show the external English online-course video with Chinese interpretation above and English source text below.
 7. Pause on the video correction: show `电路和电子产品 -> 电路与电子学`.
 8. Show video source card: mention Creative Commons license and attribution.
 9. Show metrics: first subtitle latency, correction latency, glossary hit rate, final stability rate.
@@ -52,7 +52,7 @@ http://127.0.0.1:8000
 
 右侧的修正时间线记录了为什么修、修正延迟、版本变化和命中的术语。这里可以看到修正延迟是 1480 毫秒，版本从 v1 更新到 v2。这也是本作品区别于普通翻译工具的核心创新点。
 
-接下来切到外部英文视频同传。这里加载的是带授权来源的公开网课视频，系统在视频播放器上叠加中文字幕。这个场景对应题目中“观看英语网课、技术分享或会议”的真实需求。可以看到课程术语 Circuits and Electronics 一开始被译成电路和电子产品，后续上下文确认课程名称后，字幕回溯修正为电路与电子学，并保留修正前文本、版本变化和修正原因。
+接下来切到外部英文视频同传。这里加载的是带授权来源的公开网课视频，系统在视频播放器上叠加双语字幕：中文同传在上方，英文原文在下方，方便评委对照“说了什么”和“翻成什么”。这个场景对应题目中“观看英语网课、技术分享或会议”的真实需求。可以看到课程术语 Circuits and Electronics 一开始被译成电路和电子产品，后续上下文确认课程名称后，字幕回溯修正为电路与电子学，并保留修正前文本、版本变化和修正原因。
 
 下方还有术语表、量化指标、字幕导出和会后总结。最终字幕可以导出为 Markdown 或 SRT，便于课后复盘或制作字幕。
 
@@ -70,6 +70,7 @@ http://127.0.0.1:8000
 - `v1 -> v2`
 - `attention mechanism`
 - `外部英文视频同传`
+- 中文同传在上方，英文原文在下方
 - `Creative Commons`
 - `电路与电子学`
 - `Circuits and Electronics`
