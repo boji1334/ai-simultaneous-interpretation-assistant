@@ -47,7 +47,7 @@
 5. Run `.\scripts\smoke-single-service.ps1`.
 6. Manually verify the correction demo if the video needs a visual rehearsal.
 7. Generate or record original demo audio from `assets/demo/demo-script.en.txt`.
-8. Record or regenerate a narrated demo video with `python scripts\generate-demo-video.py`.
+8. Record or regenerate a narrated demo video with `python -m pip install -r scripts\demo-video-requirements.txt` and `python scripts\generate-demo-video.py`.
 9. Upload the video to an accessible platform.
 10. Add the video link to `README.md`.
 11. Confirm README lists dependencies and original/third-party boundaries.

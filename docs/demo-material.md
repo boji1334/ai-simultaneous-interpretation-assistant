@@ -75,7 +75,7 @@ This audio is generated from original text in this repository and is suitable fo
 The repository includes a script that generates a narrated MP4 from the demo storyboard:
 
 ```powershell
-python -m pip install imageio-ffmpeg edge-tts
+python -m pip install -r scripts\demo-video-requirements.txt
 python scripts\generate-demo-video.py
 ```
 
