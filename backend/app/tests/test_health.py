@@ -262,6 +262,8 @@ def test_video_demo_snapshot_contains_corrected_course_term() -> None:
 
     assert response.status_code == 200
     payload = response.json()
+    assert len(payload["segments"]) >= 17
+    assert payload["segments"][-1]["endTime"] >= 128
     corrected = next(segment for segment in payload["segments"] if segment["id"] == "video-002")
     assert corrected["status"] == "corrected"
     assert "电路与电子学" in corrected["translatedText"]

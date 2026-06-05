@@ -64,6 +64,8 @@ async def check_http_endpoints() -> None:
         assert_true(video_source["mediaUrl"].startswith("https://upload.wikimedia.org/"), "Video media URL invalid.")
 
         video_snapshot = (await client.get(f"{BASE_URL}/api/video-demo/snapshot")).json()
+        assert_true(len(video_snapshot["segments"]) >= 17, "Video demo should cover the full transcript.")
+        assert_true(video_snapshot["segments"][-1]["endTime"] >= 128, "Video demo subtitles stop before video end.")
         video_corrected = next(segment for segment in video_snapshot["segments"] if segment["id"] == "video-002")
         assert_true(video_corrected["status"] == "corrected", "Video demo did not expose corrected segment.")
         assert_true("电路与电子学" in video_corrected["translatedText"], "Video demo correction missing target term.")
