@@ -6,7 +6,7 @@
 
 ## 审阅入口
 
-- 导师审阅说明：[docs/advisor-review.md](docs/advisor-review.md)
+- 导师审阅说明：[ADVISOR_REVIEW.md](ADVISOR_REVIEW.md)
 - 比赛规则核对：[docs/competition-audit.md](docs/competition-audit.md)
 - 最终提交清单：[docs/submission-checklist.md](docs/submission-checklist.md)
 - Demo 视频：[final-demo.mp4](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4)
@@ -319,6 +319,7 @@ set TRANSLATION_BASE_URL=https://api.openai.com/v1
 ```text
 translate_english/
   README.md
+  ADVISOR_REVIEW.md
   .env.example
   .github/
     PULL_REQUEST_TEMPLATE.md
