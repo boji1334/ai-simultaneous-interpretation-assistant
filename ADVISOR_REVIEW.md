@@ -6,6 +6,7 @@
 
 - 仓库地址：https://github.com/boji1334/ai-simultaneous-interpretation-assistant
 - Demo 视频：https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4
+- Demo 视频（备用）：https://www.bilibili.com/video/BV1cYEt6FEmF/
 - README：[README.md](README.md)
 - 比赛规则核对：[docs/competition-audit.md](docs/competition-audit.md)
 - 最终提交清单：[docs/submission-checklist.md](docs/submission-checklist.md)
