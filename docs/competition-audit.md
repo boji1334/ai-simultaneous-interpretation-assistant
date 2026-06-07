@@ -8,7 +8,7 @@ This document maps the current project to the official XEngineer submission and 
 | --- | ---: | --- | --- |
 | Product completeness and innovation | 40% | Runnable live subtitle workspace, synchronized self-written audio demo, WebSocket streams, chunked microphone stream path, correction highlight, correction timeline, subtitle revision ledger, glossary, metrics, export, summary, optional voice playback | No blocker; optional final UI rehearsal before submission |
 | Development process and quality | 40% | FastAPI/React split, Provider interfaces, Provider diagnostics, state manager, correction engine, tests, CI workflow, PR template, scripts, repeated small PRs | No blocker; keep future changes as small PRs |
-| Demo and presentation | 20% | Narrated PPT-style demo video, natural Chinese neural narration, deterministic correction moment, README video link, release asset | Optional mirror to Bilibili or cloud drive |
+| Demo and presentation | 20% | Narrated PPT-style demo video, natural Chinese neural narration, deterministic correction moment, README video link, GitHub Release asset, Bilibili backup link | No blocker; manually confirm both video links before final submission |
 
 ## Official Requirement Checklist
 
@@ -20,7 +20,7 @@ This document maps the current project to the official XEngineer submission and 
 | Automatic correction of previous ASR/translation errors | Implemented | Correction from `张力机制` to `注意力机制`; correction trace; subtitle revision ledger; glossary-driven `CorrectionEngine` tests |
 | README document | Implemented | Root `README.md` |
 | Public GitHub/Gitee repository | Implemented | `https://github.com/boji1334/ai-simultaneous-interpretation-assistant` |
-| Demo video | Implemented | GitHub Release video linked in README |
+| Demo video | Implemented | GitHub Release video and Bilibili backup link listed in README |
 | Continuous PR and commit history | Implemented | Multiple merged PRs with scoped titles and descriptions |
 | Commit timestamps inside selected batch | Implemented so far | Current commits are inside `2026-06-05 00:00 - 2026-06-07 23:59`; keep future commits inside the same window |
 | Third-party dependencies listed | Implemented | README original boundary and dependency sections |
@@ -79,8 +79,8 @@ Latest verified coverage:
 9. Show export and summary.
 10. Mention test/build verification.
 
-## Final Non-Blocking Suggestions
+## Final Manual Checks
 
-1. Mirror the demo video to Bilibili or a cloud drive and add the backup link to README.
-2. If time allows, replace the neural TTS narration with the contestant's own voice for more trust and energy.
-3. Keep one final small PR for any mentor feedback so the PR timeline continues naturally.
+1. Open the GitHub Release video link and confirm it plays.
+2. Open the Bilibili backup link and confirm it plays.
+3. Submit the repository URL and README demo video link before the official deadline.

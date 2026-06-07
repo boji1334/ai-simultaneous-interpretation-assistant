@@ -100,6 +100,7 @@ The generated MP4 is ignored by Git and can be uploaded to a public release, Bil
 
 ```text
 https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4
+https://www.bilibili.com/video/BV1cYEt6FEmF/
 ```
 
 ## Correction Moment

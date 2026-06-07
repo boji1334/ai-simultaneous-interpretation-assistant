@@ -10,6 +10,7 @@
 - 比赛规则核对：[docs/competition-audit.md](docs/competition-audit.md)
 - 最终提交清单：[docs/submission-checklist.md](docs/submission-checklist.md)
 - Demo 视频：[final-demo.mp4](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4)
+- Demo 视频（备用）：[Bilibili](https://www.bilibili.com/video/BV1cYEt6FEmF/)
 
 ## 比赛信息
 
@@ -198,6 +199,7 @@ http://127.0.0.1:8000
 
 - Release 页面：[AI 同声传译助手 Demo Video](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/tag/demo-video-v1)
 - MP4 直链：[final-demo.mp4](https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4)
+- 备用链接：[Bilibili](https://www.bilibili.com/video/BV1cYEt6FEmF/)
 
 视频包含中文语音讲解，覆盖题目贴合度、实时字幕流、`张力机制 -> 注意力机制` 回溯修正、同步素材同传、修正时间线、量化指标、导出、总结和工程质量说明。公开视频默认使用 `zh-CN-XiaoxiaoNeural` 生成更接近真人讲解的中文旁白；本地重新生成时若无法访问神经网络 TTS，会自动降级为 Windows 离线语音以保证可复现。
 
@@ -410,7 +412,7 @@ translate_english/
 | 创新性 | 字幕状态机、滑动窗口修正、术语表辅助修正、可审计修正时间线、字幕版本轨迹、量化指标 |
 | 工程质量 | 前后端分层、Provider 架构、测试、CI、脚本、文档 |
 | README | 已提供启动、架构、依赖、原创边界和比赛规则说明 |
-| Demo 视频 | 已录制并上传到 GitHub Release，README 已提供链接 |
+| Demo 视频 | 已录制并上传到 GitHub Release，README 已提供 Bilibili 备用链接 |
 | 持续 PR/commit | 已通过多个小 PR 持续交付，主分支保持可运行 |
 | commit 时间戳 | 当前提交均在 2026-06-05 00:00 至 2026-06-07 23:59 批次窗口内 |
 
@@ -419,4 +421,4 @@ translate_english/
 1. 确认仓库保持公开或在截止后可公开访问。
 2. 在官方提交入口填写仓库地址和 README 中的 demo 视频链接。
 3. 截止前再次运行 `.\scripts\check.ps1`、`.\scripts\smoke-single-service.ps1`、`.\scripts\pre-submit-audit.ps1`。
-4. 若希望再备份一份视频，可将 Release 中的 `final-demo.mp4` 同步上传到 B 站或网盘，并把备用链接补充到 README。
+4. Demo 视频已提供 GitHub Release 主链接和 Bilibili 备用链接，提交前可分别打开确认可播放。

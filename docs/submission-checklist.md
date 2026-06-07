@@ -25,7 +25,7 @@
 - Full fallback snapshot via `加载最终字幕`.
 - Tests and CI workflow.
 - PR template.
-- Narrated demo video uploaded to GitHub Release.
+- Narrated demo video uploaded to GitHub Release with Bilibili backup link.
 
 ## Before First Official Submission
 
@@ -49,13 +49,14 @@
 7. Generate or record original demo audio from `assets/demo/demo-script.en.txt`.
 8. Record or regenerate a narrated demo video with `python -m pip install -r scripts\demo-video-requirements.txt` and `python scripts\generate-demo-video.py`.
 9. Upload the video to an accessible platform.
-10. Add the video link to `README.md`.
+10. Add the GitHub Release and Bilibili backup video links to `README.md`.
 11. Confirm README lists dependencies and original/third-party boundaries.
 
 Current demo video:
 
 ```text
 https://github.com/boji1334/ai-simultaneous-interpretation-assistant/releases/download/demo-video-v1/final-demo.mp4
+https://www.bilibili.com/video/BV1cYEt6FEmF/
 ```
 
 ## Suggested First PR
