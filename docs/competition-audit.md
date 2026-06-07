@@ -82,5 +82,5 @@ Latest verified coverage:
 ## Final Manual Checks
 
 1. Open the GitHub Release video link and confirm it plays.
-2. Open the Bilibili backup link and confirm it plays.
+2. Open the Bilibili backup link and confirm it plays: `https://www.bilibili.com/video/BV1cYEt6FEmF/`.
 3. Submit the repository URL and README demo video link before the official deadline.
